@@ -224,7 +224,14 @@ elif menu == "🏆 Thi":
     exam = exams[0]
 
     if "percent" not in st.session_state:
-        st.session_state.percent = None
+        percent = st.session_state.get("percent", None)
+
+if percent is not None:
+
+    if percent >= 70:
+        st.success("🎓 ĐẬU!")
+    else:
+        st.error("❌ RỚT!")
 
     answers = []
 
