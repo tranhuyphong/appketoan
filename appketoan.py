@@ -94,6 +94,7 @@ menu = st.sidebar.radio("Menu", [
     "📊 Financial Report"
     "🤖 Chấm bút toán",
     "📚 Từ điển"
+    "🚨 Fraud Detection"
 ])
 
 
@@ -480,6 +481,41 @@ if percent >= 70:
         "Phong AI Accounting Certificate",
         file_name="certificate.txt"
     )
+elif menu == "📊 Financial Report":
+
+    from data.finance_data import transactions
+    from engine.financial_report import generate_report
+    import pandas as pd
+
+    st.header("📊 Báo cáo tài chính tự động")
+
+    report = generate_report(transactions)
+
+    st.metric("💰 Doanh thu", report["revenue"])
+    st.metric("💸 Chi phí", report["expense"])
+    st.metric("📈 Lợi nhuận", report["profit"])
+
+    df = pd.DataFrame(transactions)
+    st.dataframe(df)
+
+    if report["profit"] < 0:
+        st.error("⚠️ Doanh nghiệp đang lỗ")
+    else:
+        st.success("✅ Doanh nghiệp có lãi")
+elif menu == "🚨 Fraud Detection":
+
+    from data.finance_data import transactions
+    from engine.fraud_detection import detect_fraud
+
+    st.header("🚨 AI phát hiện gian lận")
+
+    alerts = detect_fraud(transactions)
+
+    if len(alerts) == 0:
+        st.success("✅ Không phát hiện gian lận")
+    else:
+        for a in alerts:
+            st.error(f"⚠️ {a}")
 
 
 # ================= AI GRADER =================
