@@ -1,90 +1,77 @@
 import streamlit as st
-from data import ACADEMY_DATA
+from data.curriculum import curriculum
+from data.dictionary import dictionary
+from data.jobs import jobs
+from engine.boss_ai import boss_msg
+from engine.ai_grader import grade
 
-# --- CẤU HÌNH BAN ĐẦU ---
-st.set_page_config(page_title="Học Viện Kế Toán Slay", layout="wide")
+# ===== CONFIG =====
+st.set_page_config(page_title="Phong AI Accounting", layout="wide")
 
-if "lesson_idx" not in st.session_state: st.session_state.lesson_idx = 0
-if "quiz_passed" not in st.session_state: st.session_state.quiz_passed = False
+# ===== STATE =====
+if "coins" not in st.session_state:
+    st.session_state.coins = 100
 
-# --- SIDEBAR NAV ---
-with st.sidebar:
-    st.title("💅 Kế Toán Slay")
-    phase_id = st.selectbox("Chọn Chặng:", list(ACADEMY_DATA.keys()), format_func=lambda x: ACADEMY_DATA[x]["name"])
-    
-    modules = ACADEMY_DATA[phase_id]["modules"]
-    mod_id = st.radio("Học phần:", list(modules.keys()), format_func=lambda x: f"{'🔒' if modules[x]['is_premium'] else '📖'} {modules[x]['name']}")
-    
-    # Kiểm tra nếu đổi Module thì reset bài học
-    if "last_mod" not in st.session_state or st.session_state.last_mod != mod_id:
-        st.session_state.lesson_idx = 0
-        st.session_state.last_mod = mod_id
-        st.session_state.quiz_passed = False
+# ===== HEADER =====
+st.title("🚀 PHONG AI ACCOUNTING")
 
-# --- HIỂN THỊ NỘI DUNG ---
-module = ACADEMY_DATA[phase_id]["modules"][mod_id]
-lessons = module["lessons"]
+st.metric("💰 Coins", st.session_state.coins)
 
-if not lessons:
-    st.info("🚧 Nội dung đang được cập nhật...")
-else:
-    lesson = lessons[st.session_state.lesson_idx]
-    
-    st.title(f"Bài {st.session_state.lesson_idx + 1}: {lesson['title']}")
-    
-    tab_learn, tab_quiz = st.tabs(["📚 Bài Giảng Trực Quan", "✍️ Kiểm Tra Đầu Ra"])
-    
-    with tab_learn:
-        st.markdown(f"#### 📖 Lý thuyết cốt lõi\n{lesson['theory']}")
-        
-        # Chèn Hình ảnh / Sơ đồ tư duy
-        if "visuals" in lesson:
-            st.write("---")
-            st.subheader("🧠 Sơ đồ tư duy & Trực quan")
-            for img in lesson["visuals"]:
-                st.write(img) # Streamlit sẽ hiển thị tag [Image of...]
-        
-        # Phần kiến thức mở rộng
-        with st.expander("🚀 Kiến thức mở rộng (Deep Dive)"):
-            st.success(lesson.get("deep_dive", "Đang cập nhật..."))
+# ===== MENU =====
+menu = st.sidebar.radio("Menu", [
+    "📘 Học",
+    "💼 Đi làm",
+    "🤖 Chấm bút toán",
+    "📚 Từ điển"
+])
 
-    with tab_quiz:
-        st.subheader("🔥 Vượt qua thử thách để đi tiếp")
-        correct_needed = len(lesson["exercises"])
-        score = 0
-        
-        for i, ex in enumerate(lesson["exercises"]):
-            st.write(f"**Câu {i+1}:** {ex['q']}")
-            ans = st.radio(f"Chọn đáp án (Câu {i+1}):", ex['options'], key=f"q_{mod_id}_{st.session_state.lesson_idx}_{i}")
-            if ans == ex['correct']:
-                score += 1
-        
-        # Kiểm tra điều kiện qua bài
-        if score == correct_needed:
-            st.session_state.quiz_passed = True
-            st.balloons()
-            st.success("✅ Tuyệt vời! Bạn đã nắm vững kiến thức bài này.")
+# ================= HỌC =================
+if menu == "📘 Học":
+    lesson = curriculum[0]["units"][0]["lessons"][0]
+
+    st.subheader("Bài học")
+    st.info(lesson["theory"])
+
+    ans = st.radio(lesson["question"], lesson["options"])
+
+    if st.button("Nộp"):
+        if lesson["options"].index(ans) == lesson["correct"]:
+            st.success("Đúng +10 coins")
+            st.session_state.coins += 10
         else:
-            st.session_state.quiz_passed = False
-            st.warning(f"⚡ Bạn cần đúng {score}/{correct_needed} câu. Hãy đọc lại phần Deep Dive nhé!")
+            st.error("Sai -5 coins")
+            st.session_state.coins -= 5
 
-    # --- NAVIGATION ---
-    st.divider()
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        if st.session_state.lesson_idx > 0:
-            if st.button("⬅️ Quay lại"):
-                st.session_state.lesson_idx -= 1
-                st.session_state.quiz_passed = False
-                st.rerun()
-                
-    with col2:
-        if st.session_state.lesson_idx < len(lessons) - 1:
-            if st.session_state.quiz_passed:
-                if st.button("Bài tiếp theo ➡️", type="primary"):
-                    st.session_state.lesson_idx += 1
-                    st.session_state.quiz_passed = False
-                    st.rerun()
-            else:
-                st.button("🔒 Hoàn thành kiểm tra để tiếp tục", disabled=True)
+# ================= ĐI LÀM =================
+elif menu == "💼 Đi làm":
+    task = jobs[0]["tasks"][0]
+
+    st.subheader("Công việc hôm nay")
+
+    st.info(boss_msg(task))
+
+    st.write(task["description"])
+
+    user = st.text_input("Nhập bút toán")
+
+    if st.button("Nộp task"):
+        if user.lower() in task["correct"].lower():
+            st.success("+20 coins")
+            st.session_state.coins += 20
+        else:
+            st.error("-10 coins")
+            st.session_state.coins -= 10
+
+# ================= AI GRADER =================
+elif menu == "🤖 Chấm bút toán":
+    entry = st.text_area("Nhập bút toán")
+
+    if st.button("Chấm"):
+        st.write(grade(entry))
+
+# ================= DICTIONARY =================
+elif menu == "📚 Từ điển":
+    key = st.text_input("Nhập TK")
+
+    if key in dictionary:
+        st.success(dictionary[key])
