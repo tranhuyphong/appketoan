@@ -24,6 +24,18 @@ if "coins" not in st.session_state:
 st.title("🚀 PHONG AI ACCOUNTING")
 
 st.metric("💰 Coins", st.session_state.coins)
+st.subheader("📊 Học lực")
+
+if "skills" in st.session_state:
+    for skill, data in st.session_state.skills.items():
+        total = data["correct"] + data["wrong"]
+
+        if total > 0:
+            acc = data["correct"] / total * 100
+        else:
+            acc = 0
+
+        st.write(f"{skill}: {round(acc,1)}%")
 
 # ===== MENU =====
 menu = st.sidebar.radio("Menu", [
