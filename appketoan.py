@@ -4,8 +4,8 @@ import datetime
 from supabase import create_client
 
 # ================= SUPABASE =================
-SUPABASE_URL = "YOUR_URL"
-SUPABASE_KEY = "YOUR_KEY"
+SUPABASE_URL = "wjwtowmdcdkpryxcqqty"
+SUPABASE_KEY = "tranhuyphong's Project"
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ================= INIT STATE =================
