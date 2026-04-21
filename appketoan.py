@@ -27,10 +27,9 @@ def init_state():
 init_state()
 
 # ================= LOGIN / REGISTER =================
+# ================= LOGIN / REGISTER =================
 if "user" not in st.session_state:
     st.title("🚀 PHONG AI ACCOUNTING")
-    
-    # Sử dụng Tabs để phân biệt rõ ràng Đăng nhập và Đăng ký
     tab1, tab2 = st.tabs(["🔐 Đăng nhập", "📝 Đăng ký tài khoản"])
 
     with tab1:
@@ -44,17 +43,12 @@ if "user" not in st.session_state:
                     "password": login_password
                 })
                 if res.user:
+                    # BƯỚC QUAN TRỌNG: Gán user và ép app load lại ngay
                     st.session_state.user = res.user.email
-                    # Kiểm tra và khởi tạo dữ liệu trong table users
-                    data = supabase.table("users").select("*").eq("email", st.session_state.user).execute()
-                    if len(data.data) > 0:
-                        st.session_state.coins = data.data[0]["coins"]
-                    else:
-                        supabase.table("users").insert({"email": st.session_state.user, "coins": 100}).execute()
-                    st.rerun()
+                    st.success("Đăng nhập thành công!")
+                    st.rerun() # Lệnh này giúp bỏ qua lần bấm thứ 2
             except Exception as e:
                 st.error("Sai tài khoản hoặc mật khẩu!")
-
     with tab2:
         reg_email = st.text_input("Email đăng ký", key="reg_email")
         reg_password = st.text_input("Password đăng ký", type="password", key="reg_pw")
