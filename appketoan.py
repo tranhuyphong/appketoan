@@ -228,6 +228,8 @@ percent = st.session_state.get("percent", None)
 
 if percent is not None:
 
+    percent = float(percent)
+
     st.success(f"🎯 Điểm: {round(percent,1)}%")
     st.progress(percent / 100)
 
@@ -236,7 +238,6 @@ if percent is not None:
         st.success("🎓 ĐẬU!")
     else:
         st.error("❌ RỚT!")
-
     answers = []
 
     for i, q in enumerate(exam["questions"]):
