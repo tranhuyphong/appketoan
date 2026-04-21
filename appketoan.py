@@ -1,4 +1,7 @@
 import streamlit as st
+from data.question_bank import question_bank
+from engine.ai_teacher import teacher_explain
+from engine.progress_tracker import update_progress
 from engine.classroom_ai import classroom_chat
 from data.curriculum import curriculum
 from data.dictionary import dictionary
