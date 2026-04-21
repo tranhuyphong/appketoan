@@ -20,15 +20,15 @@ def init_state():
         "percent": None,
         "q_index": 0,
         "chat_history": [],
-        "skills": {}
+        "skills": {},
+        "learned_lessons": [], # Thêm vào đây (nhớ dấu phẩy ở cuối dòng trên)
+        "daily_learn": 0       # Thêm vào đây
     }
     for k, v in defaults.items():
         if k not in st.session_state:
             st.session_state[k] = v
 
-init_state()
-"learned_lessons": [],
-"daily_learn": 0,
+init_state() # Gọi hàm xong là xong, không viết thêm biến rời ở dưới dòng này
 
 # ================= LOGIN / REGISTER =================
 if "user" not in st.session_state:
@@ -90,18 +90,22 @@ def save_coins():
             print(f"Lưu coin thất bại: {e}")
 
 # ================= DAILY =================
-if "user" in st.session_state: # <--- THÊM DÒNG NÀY (Bọc toàn bộ đoạn dưới vào)
+if "user" in st.session_state: 
     today = str(datetime.date.today())
+    
+    # Quà tặng đăng nhập mỗi ngày
     if st.session_state.last_login != today:
         st.session_state.coins += 20
         st.session_state.last_login = today
         st.success("🎁 Daily +20 coins")
         save_coins()
-if st.session_state.daily_learn >= 3:
-    st.success("🎁 Daily học đủ 3 bài +30 coins")
-    st.session_state.coins += 30
-    st.session_state.daily_learn = 0
-    save_coins()
+    
+    # Quà tặng học đủ 3 bài
+    if st.session_state.daily_learn >= 3:
+        st.success("🎁 Daily học đủ 3 bài +30 coins")
+        st.session_state.coins += 30
+        st.session_state.daily_learn = 0 # Reset lại số bài học trong ngày
+        save_coins()
 # ================= IMPORT MODULE =================
 from data.question_bank import question_bank
 from engine.ai_teacher import teacher_explain
