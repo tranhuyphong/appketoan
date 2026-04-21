@@ -12,6 +12,7 @@ sys.path.append(os.path.dirname(__file__))
 from data.jobs import jobs
 from engine.boss_ai import boss_msg
 from engine.ai_grader import grade
+from data.case_study import case_studies
 
 # ===== CONFIG =====
 st.set_page_config(page_title="Phong AI Accounting", layout="wide")
@@ -222,6 +223,41 @@ elif menu == "📊 Dashboard":
         # ===== BẢNG =====
         st.subheader("📋 Chi tiết")
         st.dataframe(df)
+elif menu == "🧾 Case Study":
+
+    st.header("🧾 Case Study thực tế")
+
+    case = case_studies[0]
+
+    st.subheader(case["title"])
+
+    user_answers = []
+
+    for i, trans in enumerate(case["transactions"]):
+        st.write(f"{i+1}. {trans}")
+        ans = st.text_input(f"Định khoản {i+1}", key=i)
+        user_answers.append(ans)
+
+    if st.button("Nộp bài Case"):
+
+        score = 0
+
+        for i in range(len(user_answers)):
+            if user_answers[i].lower() in case["answers"][i].lower():
+                score += 1
+
+        st.success(f"🎯 Điểm: {score}/{len(case['answers'])}")
+
+        # 🤖 AI NHẬN XÉT
+        from engine.ai_teacher import teacher_explain
+
+        feedback = teacher_explain(
+            "Case study kế toán",
+            str(user_answers)
+        )
+
+        st.info("🤖 Nhận xét:")
+        st.write(feedback)
 
 
 # ================= AI GRADER =================
