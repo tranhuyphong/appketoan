@@ -1,6 +1,10 @@
 import streamlit as st
 from data.curriculum import curriculum
 from data.dictionary import dictionary
+import sys
+import os
+sys.path.append(os.path.dirname(__file__))
+
 from data.jobs import jobs
 from engine.boss_ai import boss_msg
 from engine.ai_grader import grade
