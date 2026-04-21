@@ -91,7 +91,7 @@ menu = st.sidebar.radio("Menu", [
     "💼 Đi làm",
     "🧾 Case Study",
     "📊 Dashboard",
-    "📊 Financial Report"
+    "📊 Financial Report",
     "🤖 Chấm bút toán",
     "📚 Từ điển",
     "🚨 Fraud Detection"
@@ -446,7 +446,7 @@ elif menu == "🧾 Case Study":
         st.success(f"🎯 Điểm: {round(percent,1)}%")
         st.progress(percent / 100)
 
-        if percent >= 70:
+        if percent is not None and percent >= 70:
             st.balloons()
             st.success("🎓 ĐẬU!")
         else:
@@ -481,7 +481,7 @@ if percent is not None:
     st.success(f"🎯 Điểm: {round(percent,1)}%")
     st.progress(percent / 100)
 
-    if percent >= 70:
+    if percent is not None and percent >= 70:
         st.balloons()
         st.success("🎓 ĐẬU!")
     else:
@@ -510,12 +510,12 @@ if percent is not None:
         st.success(f"🎯 Điểm: {round(percent,1)}%")
         st.progress(percent / 100)
 
-        if percent >= 70:
+        percent = st.session_state.get("percent", None)
             st.balloons()
             st.success("🎓 ĐẬU!")
         else:
             st.error("❌ RỚT!")
-if percent >= 70:
+if percent is not None and percent >= 70:
     st.success("🎓 CHỨNG NHẬN HOÀN THÀNH")
     st.download_button(
         "📥 Tải chứng nhận",
