@@ -94,10 +94,9 @@ elif menu == "🎓 Lớp học AI":
     st.session_state.chat_history = [
         {
             "role": "assistant",
-            "content": "Hôm nay chúng ta học phương trình kế toán. Tài sản = Nợ + Vốn.\n\n❓ Nếu tài sản tăng thì bên nào thay đổi?"
+            "content": "Hôm nay học phương trình kế toán.\n\n❓ Tài sản = ?"
         }
     ]
-
     # ===== HIỂN THỊ CHAT =====
     for msg in st.session_state.chat_history:
         if msg["role"] == "user":
