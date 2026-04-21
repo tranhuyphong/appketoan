@@ -1,102 +1,133 @@
 import streamlit as st
-# ===== GLOBAL STATE (ANTI BUG) =====
-if "coins" not in st.session_state:
-    st.session_state.coins = 100
+import random
+import datetime
+from supabase import create_client
 
-if "skills" not in st.session_state:
-    st.session_state.skills = {}
+# ================= SUPABASE =================
+SUPABASE_URL = "YOUR_URL"
+SUPABASE_KEY = "YOUR_KEY"
+supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-if "percent" not in st.session_state:
-    st.session_state.percent = None
+# ================= INIT STATE =================
+def init_state():
+    defaults = {
+        "coins": 100,
+        "streak": 0,
+        "last_login": "",
+        "percent": None,
+        "q_index": 0,
+        "chat_history": [],
+        "skills": {}
+    }
+    for k, v in defaults.items():
+        if k not in st.session_state:
+            st.session_state[k] = v
 
-if "q_index" not in st.session_state:
-    st.session_state.q_index = 0
+init_state()
 
-if "chat_history" not in st.session_state:
-    st.session_state.chat_history = []
+# ================= LOGIN =================
+if "user" not in st.session_state:
+
+    st.title("🔐 Login")
+
+    email = st.text_input("Email")
+    password = st.text_input("Password", type="password")
+
+    if st.button("Login"):
+        res = supabase.auth.sign_in_with_password({
+            "email": email,
+            "password": password
+        })
+
+        if res.user:
+            st.session_state.user = res.user.email
+
+            data = supabase.table("users").select("*").eq("email", st.session_state.user).execute()
+
+            if len(data.data) > 0:
+                st.session_state.coins = data.data[0]["coins"]
+            else:
+                supabase.table("users").insert({
+                    "email": st.session_state.user,
+                    "coins": 100
+                }).execute()
+
+            st.rerun()
+        else:
+            st.error("Sai tài khoản")
+
+    if st.button("Register"):
+        supabase.auth.sign_up({
+            "email": email,
+            "password": password
+        })
+        st.success("Tạo tài khoản thành công")
+
+    st.stop()
+
+# ================= SAVE =================
+def save_coins():
+    supabase.table("users").upsert({
+        "email": st.session_state.user,
+        "coins": st.session_state.coins
+    }).execute()
+
+# ================= DAILY =================
+today = str(datetime.date.today())
+if st.session_state.last_login != today:
+    st.session_state.coins += 20
+    st.session_state.last_login = today
+    st.success("🎁 Daily +20 coins")
+    save_coins()
+
+# ================= IMPORT MODULE =================
 from data.question_bank import question_bank
 from engine.ai_teacher import teacher_explain
 from engine.progress_tracker import update_progress
 from engine.classroom_ai import classroom_chat
 from data.curriculum import curriculum
 from data.dictionary import dictionary
-import sys
-import os
-sys.path.append(os.path.dirname(__file__))
-
 from data.jobs import jobs
 from engine.boss_ai import boss_msg
 from engine.ai_grader import grade
 from data.case_study import case_studies
 
-# ===== CONFIG =====
+# ================= CONFIG =================
 st.set_page_config(page_title="Phong AI Accounting", layout="wide")
-if "dark" not in st.session_state:
-    st.session_state.dark = False
 
-dark = st.toggle("🌙 Dark Mode", value=st.session_state.dark)
-st.session_state.dark = dark
+# ================= HEADER =================
+coins = st.session_state.coins
 
-bg = "#000" if dark else "#f2f2f7"
-card = "rgba(28,28,30,0.8)" if dark else "white"
+if coins < 100:
+    rank = "🥉 Intern"
+elif coins < 300:
+    rank = "🥈 Junior"
+elif coins < 600:
+    rank = "🥇 Senior"
+else:
+    rank = "👑 Manager"
 
 st.markdown(f"""
-<style>
-body {{background:{bg};}}
-
-.card {{
-    background:{card};
-    padding:16px;
-    border-radius:20px;
-    box-shadow:0 4px 15px rgba(0,0,0,0.1);
-    margin-bottom:12px;
-}}
-
-.stButton>button {{
-    width:100%;
-    height:50px;
-    border-radius:15px;
-}}
-</style>
-""", unsafe_allow_html=True)
-
-# ===== STATE =====
-if "coins" not in st.session_state:
-    st.session_state.coins = 100
-
-# ===== HEADER =====
-st.markdown(f"""
-<div class="card">
+<div style='padding:20px;background:#1e293b;border-radius:20px'>
 <h2>📱 Phong AI Accounting</h2>
-💰 Coins: {st.session_state.coins}
+💰 {coins} | 🔥 {st.session_state.streak} | 🎖 {rank}
 </div>
 """, unsafe_allow_html=True)
 
-if "skills" in st.session_state:
-    for skill, data in st.session_state.skills.items():
-        total = data["correct"] + data["wrong"]
-
-        if total > 0:
-            acc = data["correct"] / total * 100
-        else:
-            acc = 0
-
-        st.write(f"{skill}: {round(acc,1)}%")
-
-# ===== MENU =====
+# ================= MENU =================
 menu = st.sidebar.radio("Menu", [
     "📘 Học",
-    "🎓 Lớp học AI (Quiz)",   # 👈 học chuẩn
-    "🎓 Lớp học AI (Chat)",   # 👈 chat realtime
+    "🎓 Lớp học AI (Quiz)",
+    "🎓 Lớp học AI (Chat)",
     "💼 Đi làm",
     "🧾 Case Study",
     "📊 Dashboard",
     "📊 Financial Report",
     "🤖 Chấm bút toán",
     "📚 Từ điển",
-    "🚨 Fraud Detection"
+    "🚨 Fraud Detection",
+    "🏆 Leaderboard"
 ])
-
 
 # ================= HỌC =================
 if menu == "📘 Học":
@@ -105,465 +136,163 @@ if menu == "📘 Học":
 # ================= QUIZ =================
 elif menu == "🎓 Lớp học AI (Quiz)":
 
-    st.header("🎓 Lớp học chuẩn giáo dục")
-
-    # ===== INIT =====
-    if "q_index" not in st.session_state:
-        st.session_state.q_index = 0
-
     q = question_bank[st.session_state.q_index]
 
-    # ===== UI =====
-    st.markdown(f"""
-    <div class='card'>
-        <b>Câu {q['id']}:</b><br>{q['question']}
-    </div>
-    """, unsafe_allow_html=True)
+    st.subheader(q["question"])
+    answer = st.radio("Chọn:", q["options"])
 
-    answer = st.radio("Chọn đáp án:", q["options"])
-
-    # ===== SUBMIT =====
-    if st.button("🚀 Nộp bài"):
+    if st.button("Nộp bài"):
 
         correct = q["options"].index(answer) == q["correct"]
-
         update_progress(q["skill"], correct, st.session_state)
 
         if correct:
-            st.success("✅ Đúng +10 coins")
-            st.session_state.coins += 10
+            st.session_state.streak += 1
+            reward = min(10 + st.session_state.streak * 2, 30)
+            st.success(f"✅ +{reward} 🔥 x{st.session_state.streak}")
+            st.session_state.coins += reward
+
+            if random.random() < 0.15:
+                bonus = random.randint(10, 50)
+                st.success(f"🎁 Lucky +{bonus}")
+                st.session_state.coins += bonus
         else:
-            st.error("❌ Sai -5 coins")
+            st.session_state.streak = 0
+            st.error("❌ -5")
             st.session_state.coins -= 5
 
         st.info(q["explain"])
+        save_coins()
 
-        if st.button("➡️ Câu tiếp theo"):
-            st.session_state.q_index += 1
-            st.rerun()
+    if st.button("➡️ Câu tiếp"):
+        st.session_state.q_index += 1
+        st.rerun()
 
-# ================= CHAT AI =================
+# ================= CHAT =================
 elif menu == "🎓 Lớp học AI (Chat)":
 
-    st.header("🎓 Lớp học AI (Real-time)")
+    if len(st.session_state.chat_history) == 0:
+        st.session_state.chat_history = [{"role": "assistant", "content": "Tài sản = ?"}]
 
-    # ===== INIT =====
-    if "chat_history" not in st.session_state:
-        st.session_state.chat_history = [
-            {"role": "assistant", "content": "Hôm nay học: Tài sản = ?"}
-        ]
-
-    # ===== HIỂN THỊ CHAT =====
     for msg in st.session_state.chat_history:
+        st.write(msg["content"])
 
-        if msg["role"] == "user":
-            st.markdown(f"""
-            <div style='text-align:right; margin:8px;'>
-                <span style='background:#007AFF;color:white;
-                padding:8px 12px;border-radius:15px;'>
-                {msg["content"]}
-                </span>
-            </div>
-            """, unsafe_allow_html=True)
-
-        else:
-            st.markdown(f"""
-            <div style='text-align:left; margin:8px;'>
-                <span style='background:#E5E5EA;
-                padding:8px 12px;border-radius:15px;'>
-                {msg["content"]}
-                </span>
-            </div>
-            """, unsafe_allow_html=True)
-
-    st.divider()
-
-    # ===== INPUT =====
-    user = st.text_input("Nhập câu trả lời hoặc câu hỏi")
+    user = st.text_input("Nhập")
 
     if st.button("Gửi") and user:
 
-        # lưu user
-        st.session_state.chat_history.append({
-            "role": "user",
-            "content": user
-        })
+        st.session_state.chat_history.append({"role": "user", "content": user})
+        reply = classroom_chat(st.session_state.chat_history, user)
+        st.session_state.chat_history.append({"role": "assistant", "content": reply})
 
-        # gọi AI
-        with st.spinner("🤖 Giáo viên đang suy nghĩ..."):
-            reply = classroom_chat(
-                st.session_state.chat_history,
-                user
-            )
-
-        # lưu AI
-        st.session_state.chat_history.append({
-            "role": "assistant",
-            "content": reply
-        })
-
-        # 🎮 GAME HOÁ
         if "đúng" in reply.lower():
             st.session_state.coins += 10
         else:
             st.session_state.coins -= 5
 
+        save_coins()
         st.rerun()
-
-    # ===== RESET =====
-    if st.button("🔄 Reset lớp học"):
-        st.session_state.chat_history = [
-            {"role": "assistant", "content": "Bắt đầu lại: Tài sản = ?"}
-        ]
-        st.rerun()
-
-# ================= TỪ ĐIỂN =================
-elif menu == "📚 Từ điển":
-
-    st.header("📚 Từ điển")
-
-    key = st.text_input("Nhập TK")
-
-    if key in dictionary:
-        st.success(dictionary[key])
-    elif key != "":
-        st.warning("Không tìm thấy")
-
 
 # ================= ĐI LÀM =================
 elif menu == "💼 Đi làm":
 
-    import random
+    task = random.choice(jobs[0]["tasks"])
+    user = st.text_input("Nhập bút toán")
 
-    st.header("🏢 Company Mode - Mô phỏng doanh nghiệp")
+    if st.button("Nộp"):
 
-    # ===== INIT STATE =====
-    if "work_day" not in st.session_state:
-        st.session_state.work_day = 1
-
-    if "performance" not in st.session_state:
-        st.session_state.performance = 100
-
-    if "role" not in st.session_state:
-        st.session_state.role = "Intern"
-
-    if "fail_count" not in st.session_state:
-        st.session_state.fail_count = 0
-
-    if "department" not in st.session_state:
-        st.session_state.department = "Kế toán tổng hợp"
-
-    # ===== ROLE SYSTEM =====
-    if st.session_state.work_day > 25:
-        st.session_state.role = "Manager"
-    elif st.session_state.work_day > 15:
-        st.session_state.role = "Senior"
-    elif st.session_state.work_day > 7:
-        st.session_state.role = "Junior"
-    else:
-        st.session_state.role = "Intern"
-
-    # ===== HEADER =====
-    st.markdown(f"""
-    <div class='card'>
-    📅 Day: {st.session_state.work_day}/30<br>
-    🧑‍💼 Role: <b>{st.session_state.role}</b><br>
-    🏢 Department: {st.session_state.department}<br>
-    📊 Performance: {st.session_state.performance}%
-    </div>
-    """, unsafe_allow_html=True)
-
-    # ===== DEPARTMENT TASK =====
-    departments = {
-        "Kế toán tổng hợp": jobs[0]["tasks"],
-        "Kế toán thuế": jobs[0]["tasks"],
-        "Kế toán kho": jobs[0]["tasks"]
-    }
-
-    dept = st.selectbox("Chọn phòng ban", list(departments.keys()))
-    st.session_state.department = dept
-
-    task = random.choice(departments[dept])
-
-    # ===== DIFFICULTY =====
-    difficulty = random.choice(["Easy", "Medium", "Hard"])
-    reward = {"Easy": 10, "Medium": 20, "Hard": 30}
-    penalty = {"Easy": 5, "Medium": 10, "Hard": 15}
-
-    # ===== EVENT SYSTEM =====
-    events = [
-        "📄 Sai hóa đơn VAT",
-        "💸 Lệch quỹ tiền mặt",
-        "📊 Sai báo cáo thuế",
-        "🔍 Kiểm tra đột xuất",
-        "⚠️ Khách hàng khiếu nại"
-    ]
-
-    event = random.choice(events)
-
-    st.warning(f"⚠️ Sự kiện hôm nay: {event}")
-
-    # ===== TASK UI =====
-    st.markdown(f"""
-    <div class='card'>
-    <b>📌 Nhiệm vụ ({difficulty}):</b><br>
-    {task['description']}
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.metric("💰 Lương task", f"+{reward[difficulty]} coins")
-
-    # ===== BOSS =====
-    try:
-        st.info("👨‍💼 Boss: " + boss_msg(task))
-    except:
-        st.warning("Boss offline")
-
-    # ===== INPUT =====
-    user = st.text_input("✍️ Nhập bút toán")
-
-    # ===== SUBMIT =====
-    if st.button("🚀 Nộp task"):
-
-        if user.strip() == "":
-            st.warning("Bạn chưa nhập")
+        if user.lower() in task["correct"].lower():
+            st.success("+20")
+            st.session_state.coins += 20
         else:
+            st.error("-10")
+            st.session_state.coins -= 10
 
-            if user.lower() in task["correct"].lower():
+        save_coins()
 
-                st.success(f"✅ Đúng +{reward[difficulty]} coins")
-
-                st.session_state.coins += reward[difficulty]
-                st.session_state.performance += 2
-                st.session_state.fail_count = 0
-
-            else:
-                st.error(f"❌ Sai -{penalty[difficulty]} coins")
-
-                st.session_state.coins -= penalty[difficulty]
-                st.session_state.performance -= 5
-                st.session_state.fail_count += 1
-
-                # AI HINT
-                try:
-                    hint = teacher_explain(task["description"], user)
-                    st.info("🤖 Gợi ý:")
-                    st.write(hint)
-                except:
-                    st.info("💡 Kiểm tra lại Nợ/Có")
-
-        # ===== DAY UP =====
-        st.session_state.work_day += 1
-
-    # ===== AUDIT SYSTEM =====
-    if st.session_state.fail_count >= 3:
-        st.error("🚨 BỊ KIỂM TOÁN!")
-        st.session_state.performance -= 10
-        st.session_state.fail_count = 0
-
-    # ===== KPI =====
-    st.progress(st.session_state.performance / 100)
-
-    # ===== END GAME =====
-    if st.session_state.work_day > 30:
-
-        st.success("🎉 Hoàn thành 30 ngày làm việc!")
-
-        if st.session_state.performance > 85:
-            st.success("🏆 Xuất sắc - Sẵn sàng đi làm thật")
-        elif st.session_state.performance > 65:
-            st.info("👍 Khá - Có thể làm việc")
-        else:
-            st.error("⚠️ Cần đào tạo lại")
-
-        st.stop()
-
-    # ===== RESET =====
-    if st.button("🔄 Reset Company"):
-        st.session_state.work_day = 1
-        st.session_state.performance = 100
-        st.session_state.fail_count = 0
-        st.session_state.coins = 100
-        st.rerun()
-elif menu == "📊 Dashboard":
-
-    st.header("📊 Phân tích học lực")
-
-    if "skills" in st.session_state:
-
-        total_correct = sum(v["correct"] for v in st.session_state.skills.values())
-        total_wrong = sum(v["wrong"] for v in st.session_state.skills.values())
-
-        acc = total_correct / (total_correct + total_wrong) * 100 if (total_correct+total_wrong)>0 else 0
-
-        st.metric("🎯 Accuracy", f"{round(acc,1)}%")
-        st.metric("✅ Đúng", total_correct)
-        st.metric("❌ Sai", total_wrong)
-
-        # Rank giả lập
-        if acc > 80:
-            st.success("🏆 Rank: Expert")
-        elif acc > 60:
-            st.info("🥈 Rank: Intermediate")
-        else:
-            st.warning("🥉 Rank: Beginner")
+# ================= CASE =================
 elif menu == "🧾 Case Study":
 
-    st.header("🧾 Case Study - Mô phỏng doanh nghiệp")
-
     case = case_studies[0]
+    answers = []
 
-    st.subheader(case["name"])
+    for i, t in enumerate(case["transactions"]):
+        st.write(t)
+        answers.append(st.text_input(f"Case {i}", key=f"case_{i}"))
 
-    user_answers = []
-    score = 0
-
-    # ===== HIỂN THỊ =====
-    for i, trans in enumerate(case["transactions"]):
-        st.markdown(f"""
-        <div class='card'>
-        <b>Nghiệp vụ {i+1}:</b><br>
-        {trans}
-        </div>
-        """, unsafe_allow_html=True)
-
-        ans = st.text_input("Định khoản", key=f"case_{i}")
-        user_answers.append(ans)
-
-    # ===== SUBMIT =====
-    if st.button("🚀 Chấm bài"):
-
+    if st.button("Chấm"):
+        score = 0
         for i in range(len(case["answers"])):
-
-            if user_answers[i].lower() in case["answers"][i].lower():
+            if answers[i].lower() in case["answers"][i].lower():
                 score += 1
 
         percent = score / len(case["answers"]) * 100
-
         st.session_state.percent = percent
 
-        # ===== HIỂN THỊ =====
-        st.success(f"🎯 Điểm: {round(percent,1)}%")
-        st.progress(percent / 100)
+        st.success(f"{round(percent,1)}%")
 
-        if percent is not None and percent >= 70:
-            st.balloons()
-            st.success("🎓 ĐẬU!")
+        if percent >= 70:
+            st.success("🎓 ĐẬU")
+            st.session_state.coins += int(percent)
         else:
-            st.error("❌ RỚT!")
+            st.error("❌ RỚT")
 
-        # ===== GIẢI THÍCH =====
-        st.subheader("📘 Đáp án")
+        save_coins()
 
-        for i, ans in enumerate(case["answers"]):
-            st.write(f"{i+1}. {ans}")
+# ================= DASHBOARD =================
+elif menu == "📊 Dashboard":
 
-        # ===== AI FEEDBACK =====
-        try:
-            feedback = grade(str(user_answers))
-            st.info("🤖 Nhận xét AI:")
-            st.write(feedback)
-        except:
-            st.warning("AI offline")
-elif menu == "🏆 Thi":
+    st.metric("Coins", st.session_state.coins)
+    st.metric("Streak", st.session_state.streak)
+    st.metric("Rank", rank)
 
-    st.header("🏆 Thi cuối khóa")
-
-    exam = exams[0]
-
-    # ===== HIỂN THỊ =====
-percent = st.session_state.get("percent", None)
-
-if percent is not None:
-
-    percent = float(percent)
-
-    st.success(f"🎯 Điểm: {round(percent,1)}%")
-    st.progress(percent / 100)
-
-    if percent is not None and percent >= 70:
-        st.balloons()
-        st.success("🎓 ĐẬU!")
-    else:
-        st.error("❌ RỚT!")
-    answers = []
-
-    for i, q in enumerate(exam["questions"]):
-        ans = st.radio(q["question"], q["options"], key=f"exam_{i}")
-        answers.append(ans)
-
-    if st.button("Nộp bài thi"):
-
-        score = 0
-
-        for i, q in enumerate(exam["questions"]):
-            if q["options"].index(answers[i]) == q["correct"]:
-                score += 1
-
-        st.session_state.percent = score / len(exam["questions"]) * 100
-
-    # ===== HIỂN THỊ =====
-    percent = st.session_state.get("percent", None)
-
-    if percent is not None:
-
-        st.success(f"🎯 Điểm: {round(percent,1)}%")
-        st.progress(percent / 100)
-
-        percent = st.session_state.get("percent", None)
-            st.balloons()
-            st.success("🎓 ĐẬU!")
-        else:
-            st.error("❌ RỚT!")
-if percent is not None and percent >= 70:
-    st.success("🎓 CHỨNG NHẬN HOÀN THÀNH")
-    st.download_button(
-        "📥 Tải chứng nhận",
-        "Phong AI Accounting Certificate",
-        file_name="certificate.txt"
-    )
+# ================= FINANCE =================
 elif menu == "📊 Financial Report":
 
     from data.finance_data import transactions
     from engine.financial_report import generate_report
     import pandas as pd
 
-    st.header("📊 Báo cáo tài chính tự động")
-
     report = generate_report(transactions)
 
-    st.metric("💰 Doanh thu", report["revenue"])
-    st.metric("💸 Chi phí", report["expense"])
-    st.metric("📈 Lợi nhuận", report["profit"])
+    st.metric("Doanh thu", report["revenue"])
+    st.metric("Chi phí", report["expense"])
+    st.metric("Lợi nhuận", report["profit"])
 
-    df = pd.DataFrame(transactions)
-    st.dataframe(df)
+    st.dataframe(pd.DataFrame(transactions))
 
-    if report["profit"] < 0:
-        st.error("⚠️ Doanh nghiệp đang lỗ")
-    else:
-        st.success("✅ Doanh nghiệp có lãi")
-        
+# ================= FRAUD =================
 elif menu == "🚨 Fraud Detection":
 
     from data.finance_data import transactions
     from engine.fraud_detection import detect_fraud
 
-    st.header("🚨 AI phát hiện gian lận")
-
     alerts = detect_fraud(transactions)
 
     if len(alerts) == 0:
-        st.success("✅ Không phát hiện gian lận")
+        st.success("Không có gian lận")
     else:
         for a in alerts:
-            st.error(f"⚠️ {a}")
+            st.error(a)
 
+# ================= DICTIONARY =================
+elif menu == "📚 Từ điển":
 
-# ================= AI GRADER =================
+    key = st.text_input("Nhập TK")
+    if key in dictionary:
+        st.success(dictionary[key])
+
+# ================= GRADER =================
 elif menu == "🤖 Chấm bút toán":
 
-    entry = st.text_area("Nhập bút toán")
-
+    entry = st.text_area("Nhập")
     if st.button("Chấm"):
         st.write(grade(entry))
+
+# ================= LEADERBOARD =================
+elif menu == "🏆 Leaderboard":
+
+    res = supabase.table("users").select("*").order("coins", desc=True).limit(10).execute()
+
+    for i, u in enumerate(res.data):
+        st.write(f"{i+1}. {u['email']} - {u['coins']}")
