@@ -43,6 +43,8 @@ menu = st.sidebar.radio("Menu", [
     "🎓 Lớp học AI (Quiz)",   # 👈 học chuẩn
     "🎓 Lớp học AI (Chat)",   # 👈 chat realtime
     "💼 Đi làm",
+    "🧾 Case Study",
+    "📊 Dashboard",
     "🤖 Chấm bút toán",
     "📚 Từ điển"
 ])
@@ -175,6 +177,51 @@ elif menu == "💼 Đi làm":
         else:
             st.error("-10 coins")
             st.session_state.coins -= 10
+elif menu == "📊 Dashboard":
+
+    import pandas as pd
+    import matplotlib.pyplot as plt
+
+    st.header("📊 Dashboard học lực")
+
+    if "skills" not in st.session_state:
+        st.warning("Chưa có dữ liệu học")
+    else:
+        data = []
+
+        for skill, v in st.session_state.skills.items():
+            total = v["correct"] + v["wrong"]
+            acc = v["correct"] / total * 100 if total > 0 else 0
+
+            data.append({
+                "Skill": skill,
+                "Correct": v["correct"],
+                "Wrong": v["wrong"],
+                "Accuracy": acc
+            })
+
+        df = pd.DataFrame(data)
+
+        # ===== KPI =====
+        st.subheader("📌 KPI")
+        col1, col2, col3 = st.columns(3)
+
+        col1.metric("Tổng kỹ năng", len(df))
+        col2.metric("Trung bình %", round(df["Accuracy"].mean(), 1))
+        col3.metric("Tổng câu đúng", df["Correct"].sum())
+
+        # ===== BIỂU ĐỒ =====
+        st.subheader("📈 Accuracy theo kỹ năng")
+
+        fig, ax = plt.subplots()
+        ax.bar(df["Skill"], df["Accuracy"])
+        plt.xticks(rotation=30)
+
+        st.pyplot(fig)
+
+        # ===== BẢNG =====
+        st.subheader("📋 Chi tiết")
+        st.dataframe(df)
 
 
 # ================= AI GRADER =================
