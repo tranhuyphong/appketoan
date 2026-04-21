@@ -180,84 +180,43 @@ elif menu == "💼 Đi làm":
             st.session_state.coins -= 10
 elif menu == "📊 Dashboard":
 
-    import pandas as pd
-    import matplotlib.pyplot as plt
+    st.header("📊 Phân tích học lực")
 
-    st.header("📊 Dashboard học lực")
+    if "skills" in st.session_state:
 
-    if "skills" not in st.session_state:
-        st.warning("Chưa có dữ liệu học")
-    else:
-        data = []
+        total_correct = sum(v["correct"] for v in st.session_state.skills.values())
+        total_wrong = sum(v["wrong"] for v in st.session_state.skills.values())
 
-        for skill, v in st.session_state.skills.items():
-            total = v["correct"] + v["wrong"]
-            acc = v["correct"] / total * 100 if total > 0 else 0
+        acc = total_correct / (total_correct + total_wrong) * 100 if (total_correct+total_wrong)>0 else 0
 
-            data.append({
-                "Skill": skill,
-                "Correct": v["correct"],
-                "Wrong": v["wrong"],
-                "Accuracy": acc
-            })
+        st.metric("🎯 Accuracy", f"{round(acc,1)}%")
+        st.metric("✅ Đúng", total_correct)
+        st.metric("❌ Sai", total_wrong)
 
-        df = pd.DataFrame(data)
-
-        # ===== KPI =====
-        st.subheader("📌 KPI")
-        col1, col2, col3 = st.columns(3)
-
-        col1.metric("Tổng kỹ năng", len(df))
-        col2.metric("Trung bình %", round(df["Accuracy"].mean(), 1))
-        col3.metric("Tổng câu đúng", df["Correct"].sum())
-
-        # ===== BIỂU ĐỒ =====
-        st.subheader("📈 Accuracy theo kỹ năng")
-
-        fig, ax = plt.subplots()
-        ax.bar(df["Skill"], df["Accuracy"])
-        plt.xticks(rotation=30)
-
-        st.pyplot(fig)
-
-        # ===== BẢNG =====
-        st.subheader("📋 Chi tiết")
-        st.dataframe(df)
+        # Rank giả lập
+        if acc > 80:
+            st.success("🏆 Rank: Expert")
+        elif acc > 60:
+            st.info("🥈 Rank: Intermediate")
+        else:
+            st.warning("🥉 Rank: Beginner")
 elif menu == "🧾 Case Study":
 
-    st.header("🧾 Case Study thực tế")
+    st.header("🧾 Case Study - Tháng 1")
 
     case = case_studies[0]
 
-    st.subheader(case["title"])
-
-    user_answers = []
+    score = 0
 
     for i, trans in enumerate(case["transactions"]):
         st.write(f"{i+1}. {trans}")
-        ans = st.text_input(f"Định khoản {i+1}", key=i)
-        user_answers.append(ans)
+        ans = st.text_input("Định khoản", key=f"case_{i}")
 
-    if st.button("Nộp bài Case"):
+        if ans.lower() in case["answers"][i].lower():
+            score += 1
 
-        score = 0
-
-        for i in range(len(user_answers)):
-            if user_answers[i].lower() in case["answers"][i].lower():
-                score += 1
-
-        st.success(f"🎯 Điểm: {score}/{len(case['answers'])}")
-
-        # 🤖 AI NHẬN XÉT
-        from engine.ai_teacher import teacher_explain
-
-        feedback = teacher_explain(
-            "Case study kế toán",
-            str(user_answers)
-        )
-
-        st.info("🤖 Nhận xét:")
-        st.write(feedback)
+    if st.button("Chấm Case"):
+        st.write(f"Điểm: {score}/{len(case['answers'])}")
 elif menu == "🏆 Thi":
 
     st.header("🏆 Thi cuối khóa")
@@ -290,6 +249,13 @@ elif menu == "🏆 Thi":
             st.success("🎓 ĐẬU! Bạn đã qua module")
         else:
             st.error("❌ RỚT! Học lại nhé")
+if percent >= 70:
+    st.success("🎓 CHỨNG NHẬN HOÀN THÀNH")
+    st.download_button(
+        "📥 Tải chứng nhận",
+        "Phong AI Accounting Certificate",
+        file_name="certificate.txt"
+    )
 
 
 # ================= AI GRADER =================
