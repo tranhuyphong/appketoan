@@ -6,7 +6,7 @@ from supabase import create_client
 # ================= SUPABASE =================
 # Sửa từ "wjwtowmdcdkpryxcqqty" thành đường dẫn đầy đủ:
 SUPABASE_URL = "https://wjwtowmdcdkpryxcqqty.supabase.co"
-SUPABASE_KEY = "sb_publishable_1-b3EAoLxoamH76ZmnNFdQ_hc8BNlHa"
+SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indqd3Rvd21kY2RrcHJ5eGNxcXR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NjY1NDMsImV4cCI6MjA5MjM0MjU0M30.jX4wAiXNezvmnwvr1hucjRxANZ5jWgzwn_9BsVCoueg"
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 # ================= INIT STATE =================
