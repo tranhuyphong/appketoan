@@ -233,7 +233,7 @@ elif menu == "🏆 Thi":
         answers.append(ans)
 
     if "percent" not in st.session_state:
-    st.session_state.percent = None
+       st.session_state.percent = None
 
 if st.button("Nộp bài thi"):
 
