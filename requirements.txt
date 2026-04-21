@@ -2,4 +2,4 @@ streamlit
 openai
 pandas
 matplotlib
-pip install supabase
+supabase
