@@ -27,7 +27,6 @@ def init_state():
 init_state()
 
 # ================= LOGIN / REGISTER =================
-# ================= LOGIN / REGISTER =================
 if "user" not in st.session_state:
     st.title("🚀 PHONG AI ACCOUNTING")
     tab1, tab2 = st.tabs(["🔐 Đăng nhập", "📝 Đăng ký tài khoản"])
@@ -75,19 +74,25 @@ if "user" not in st.session_state:
 
 # ================= SAVE =================
 def save_coins():
-    supabase.table("users").upsert({
-        "email": st.session_state.user,
-        "coins": st.session_state.coins
-    }).execute()
+    # Chỉ lưu khi đã có user đăng nhập
+    if "user" in st.session_state and st.session_state.user:
+        try:
+            supabase.table("users").upsert({
+                "email": st.session_state.user,
+                "coins": st.session_state.coins
+            }).execute()
+        except Exception as e:
+            # Chỉ in ra cửa sổ log để mình biết, không làm sập giao diện người dùng
+            print(f"Lưu coin thất bại: {e}")
 
 # ================= DAILY =================
-today = str(datetime.date.today())
-if st.session_state.last_login != today:
-    st.session_state.coins += 20
-    st.session_state.last_login = today
-    st.success("🎁 Daily +20 coins")
-    save_coins()
-
+if "user" in st.session_state: # <--- THÊM DÒNG NÀY (Bọc toàn bộ đoạn dưới vào)
+    today = str(datetime.date.today())
+    if st.session_state.last_login != today:
+        st.session_state.coins += 20
+        st.session_state.last_login = today
+        st.success("🎁 Daily +20 coins")
+        save_coins()
 # ================= IMPORT MODULE =================
 from data.question_bank import question_bank
 from engine.ai_teacher import teacher_explain
