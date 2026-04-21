@@ -1,6 +1,4 @@
 streamlit
+openai
 pandas
-openpyxl
-xlsxwriter
-google-generativeai
-Pillow
+matplotlib
