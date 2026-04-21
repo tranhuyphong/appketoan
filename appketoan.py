@@ -223,8 +223,9 @@ elif menu == "🏆 Thi":
 
     exam = exams[0]
 
-    if "exam_answers" not in st.session_state:
-        st.session_state.exam_answers = []
+    # ===== INIT =====
+    if "percent" not in st.session_state:
+        st.session_state.percent = None
 
     answers = []
 
@@ -232,30 +233,29 @@ elif menu == "🏆 Thi":
         ans = st.radio(q["question"], q["options"], key=f"exam_{i}")
         answers.append(ans)
 
-    if "percent" not in st.session_state:
-       st.session_state.percent = None
+    if st.button("Nộp bài thi"):
 
-if st.button("Nộp bài thi"):
+        score = 0
 
-    score = 0
+        for i, q in enumerate(exam["questions"]):
+            if q["options"].index(answers[i]) == q["correct"]:
+                score += 1
 
-    for i, q in enumerate(exam["questions"]):
-        if q["options"].index(answers[i]) == q["correct"]:
-            score += 1
+        st.session_state.percent = score / len(exam["questions"]) * 100
 
-    st.session_state.percent = score / len(exam["questions"]) * 100
+    # ===== HIỂN THỊ =====
+    if st.session_state.percent is not None:
 
-# 👉 dùng ở ngoài OK
-if st.session_state.percent is not None:
+        percent = st.session_state.percent
 
-    percent = st.session_state.percent
+        st.success(f"🎯 Điểm: {round(percent,1)}%")
+        st.progress(percent / 100)
 
-    st.write(f"Điểm: {percent}%")
-
-    if percent >= 70:
-        st.success("🎓 ĐẬU")
-    else:
-        st.error("❌ RỚT")
+        if percent >= 70:
+            st.balloons()
+            st.success("🎓 ĐẬU!")
+        else:
+            st.error("❌ RỚT!")
 if percent >= 70:
     st.success("🎓 CHỨNG NHẬN HOÀN THÀNH")
     st.download_button(
