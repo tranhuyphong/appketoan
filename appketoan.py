@@ -4,7 +4,8 @@ import datetime
 from supabase import create_client
 
 # ================= SUPABASE =================
-SUPABASE_URL = "wjwtowmdcdkpryxcqqty"
+# Sửa từ "wjwtowmdcdkpryxcqqty" thành đường dẫn đầy đủ:
+SUPABASE_URL = "https://wjwtowmdcdkpryxcqqty.supabase.co"
 SUPABASE_KEY = "sb_publishable_1-b3EAoLxoamH76ZmnNFdQ_hc8BNlHa"
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
