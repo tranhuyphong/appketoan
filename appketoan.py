@@ -258,6 +258,38 @@ elif menu == "🧾 Case Study":
 
         st.info("🤖 Nhận xét:")
         st.write(feedback)
+elif menu == "🏆 Thi":
+
+    st.header("🏆 Thi cuối khóa")
+
+    exam = exams[0]
+
+    if "exam_answers" not in st.session_state:
+        st.session_state.exam_answers = []
+
+    answers = []
+
+    for i, q in enumerate(exam["questions"]):
+        ans = st.radio(q["question"], q["options"], key=f"exam_{i}")
+        answers.append(ans)
+
+    if st.button("Nộp bài thi"):
+
+        score = 0
+
+        for i, q in enumerate(exam["questions"]):
+            if q["options"].index(answers[i]) == q["correct"]:
+                score += 1
+
+        percent = score / len(exam["questions"]) * 100
+
+        st.success(f"🎯 Điểm: {percent}%")
+
+        if percent >= 70:
+            st.balloons()
+            st.success("🎓 ĐẬU! Bạn đã qua module")
+        else:
+            st.error("❌ RỚT! Học lại nhé")
 
 
 # ================= AI GRADER =================
