@@ -91,7 +91,12 @@ elif menu == "🎓 Lớp học AI":
 
     # ===== INIT STATE =====
     if "chat_history" not in st.session_state:
-        st.session_state.chat_history = []
+    st.session_state.chat_history = [
+        {
+            "role": "assistant",
+            "content": "Hôm nay chúng ta học phương trình kế toán. Tài sản = Nợ + Vốn.\n\n❓ Nếu tài sản tăng thì bên nào thay đổi?"
+        }
+    ]
 
     # ===== HIỂN THỊ CHAT =====
     for msg in st.session_state.chat_history:
