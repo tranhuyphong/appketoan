@@ -33,86 +33,45 @@ SUPABASE_URL = "https://wjwtowmdcdkpryxcqqty.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indqd3Rvd21kY2RrcHJ5eGNxcXR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NjY1NDMsImV4cCI6MjA5MjM0MjU0M30.jX4wAiXNezvmnwvr1hucjRxANZ5jWgzwn_9BsVCoueg"
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 
-# ================= 4. RENDER MAP (UPDATED) =================
+# ================= 4. RENDER MAP (ZIGZAG & CLICK) =================
 def render_duolingo_pro(unit_id, lessons):
     html = f"""
     <style>
-    .map {{
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        gap: 35px;
-        padding: 20px;
-    }}
-    .row {{
-        width: 100%;
-        display: flex;
-    }}
+    .map {{ display: flex; flex-direction: column; align-items: center; gap: 35px; padding: 20px; }}
+    .row {{ width: 100%; display: flex; }}
     .left {{ justify-content: flex-start; padding-left: 20%; }}
     .right {{ justify-content: flex-end; padding-right: 20%; }}
-
-    .node {{
-        width: 80px;
-        height: 80px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-weight: bold;
-        font-size: 22px;
-        color: white;
-        cursor: pointer;
-        transition: all 0.25s ease;
+    .node {{ 
+        width: 80px; height: 80px; border-radius: 50%; display: flex; align-items: center; 
+        justify-content: center; font-weight: bold; font-size: 22px; color: white; 
+        cursor: pointer; transition: all 0.25s ease; 
     }}
-
     .node:hover {{ transform: scale(1.15); }}
-
     .done {{ background: #22c55e; }}
-    .current {{ background: #3b82f6; box-shadow: 0 0 20px #3b82f6; }}
+    .current {{ background: #3b82f6; box-shadow: 0 0 20px #3b82f6; animation: pulse 1.5s infinite; }}
     .locked {{ background: #334155; opacity: 0.4; cursor: not-allowed; }}
-    .boss {{ background: gold; color: black; }}
-    .exam {{ background: purple; }}
-
-    .line {{
-        width: 6px;
-        height: 40px;
-        background: #475569;
-    }}
+    .boss {{ background: gold; color: black; box-shadow: 0 0 15px gold; }}
+    @keyframes pulse {{ 0% {{ transform: scale(1); }} 50% {{ transform: scale(1.05); }} 100% {{ transform: scale(1); }} }}
+    .line {{ width: 6px; height: 40px; background: #475569; }}
     </style>
-
     <div class="map">
     """
-
     for i, lesson in enumerate(lessons):
-        cls = "node"
-
-        if lesson["type"] == "boss":
-            cls += " boss"
-        elif lesson["type"] == "exam":
-            cls += " exam"
-
-        if lesson["status"] == "done":
-            cls += " done"
-        elif lesson["status"] == "current":
-            cls += " current"
-        else:
-            cls += " locked"
-
+        status = lesson["status"]
+        cls = f"node {status}"
+        if lesson.get("type") == "boss": cls += " boss"
+        
         side = "left" if i % 2 == 0 else "right"
         label = lesson.get("label", str(i+1))
-        click_js = f"window.parent.postMessage('{unit_id}|{i}', '*')" if lesson["status"] != "locked" else ""
+        # JavaScript để gửi message về Streamlit
+        click_js = f"window.parent.postMessage('{unit_id}|{i}', '*')" if status != "locked" else ""
 
         html += f"""
         <div class="row {side}">
-            <div class="{cls}" onclick="{click_js}">
-                {label}
-            </div>
+            <div class="{cls}" onclick="{click_js}">{label}</div>
         </div>
         """
-
-        if i < len(lessons) - 1:
-            html += "<div class='line'></div>"
-
+        if i < len(lessons) - 1: html += "<div class='line'></div>"
     html += "</div>"
 
     return components.html(f"""
@@ -127,99 +86,41 @@ def render_duolingo_pro(unit_id, lessons):
     </script>
     """, height=650)
 
-# ================= 5. LOAD/SAVE =================
+# ================= 5. HÀM HỖ TRỢ =================
 def load_progress():
     try:
         res = supabase.table("users_progress").select("*").eq("email", st.session_state.user).execute()
         return {r["lesson_id"]: r for r in res.data}
-    except:
-        return {}
-
-def save_progress(lesson_id, score):
-    try:
-        supabase.table("users_progress").upsert({
-            "email": st.session_state.user,
-            "lesson_id": lesson_id,
-            "status": "done",
-            "score": score,
-            "last_learned": str(datetime.date.today())
-        }).execute()
-    except Exception as e:
-        print("Lỗi lưu tiến trình:", e)
+    except: return {}
 
 def save_coins():
-    if "user" in st.session_state and st.session_state.user:
+    if "user" in st.session_state:
         try:
-            supabase.table("users").upsert({
-                "email": st.session_state.user,
-                "coins": st.session_state.coins
-            }).execute()
-        except Exception as e:
-            print(f"Lưu coin thất bại: {e}")
+            supabase.table("users").upsert({"email": st.session_state.user, "coins": st.session_state.coins}).execute()
+        except: pass
 
-# ================= 6. SESSION =================
+# ================= 6. SESSION STATE =================
 if "coins" not in st.session_state:
     st.session_state.update({
-        "coins": 100,
-        "streak": 0,
-        "last_login": "",
-        "percent": None,
-        "lesson_progress": {},
-        "current_lesson": None,
-        "q_index": 0,
-        "chat_history": [],
-        "skills": {},
-        "learned_lessons": [],
-        "daily_learn": 0
+        "coins": 100, "streak": 0, "last_login": "", "lesson_progress": {},
+        "current_lesson": None, "q_index": 0, "chat_history": []
     })
 
-# ================= 7. AUTH =================
+# ================= 7. ĐĂNG NHẬP (LƯU Ý: ĐÃ SỬA ĐỂ CHẠY ỔN ĐỊNH) =================
 if "user" not in st.session_state:
     st.title("🚀 PHONG AI ACCOUNTING")
-    tab1, tab2 = st.tabs(["🔐 Đăng nhập", "📝 Đăng ký"])
-
-    with tab1:
-        email = st.text_input("Email")
-        pw = st.text_input("Password", type="password")
-        if st.button("Đăng nhập"):
-            try:
-                res = supabase.auth.sign_in_with_password({"email": email, "password": pw})
-                if res.user:
-                    st.session_state.user = res.user.email
-                    st.rerun()
-            except:
-                st.error("Sai tài khoản hoặc mật khẩu!")
-
-    with tab2:
-        reg_email = st.text_input("Email đăng ký")
-        reg_pw = st.text_input("Password đăng ký", type="password")
-        if st.button("Thực hiện Đăng ký"):
-            try:
-                supabase.auth.sign_up({"email": reg_email, "password": reg_pw})
-                st.success("Đăng ký xong! Hãy qua tab Đăng nhập.")
-            except Exception as e:
-                st.error(f"Lỗi: {e}")
+    email = st.text_input("Email")
+    pw = st.text_input("Password", type="password")
+    if st.button("Đăng nhập"):
+        try:
+            res = supabase.auth.sign_in_with_password({"email": email, "password": pw})
+            if res.user:
+                st.session_state.user = res.user.email
+                st.rerun()
+        except: st.error("Lỗi đăng nhập!")
     st.stop()
 
-# ================= 8. LOAD PROGRESS =================
-if "progress_loaded" not in st.session_state:
-    db_progress = load_progress()
-    for l_id, data in db_progress.items():
-        st.session_state.lesson_progress[l_id] = {
-            "answers": {},
-            "submitted": True,
-            "score": data.get("score", 0)
-        }
-    st.session_state.progress_loaded = True
-
-# ================= 9. DAILY REWARD =================
-today = str(datetime.date.today())
-if st.session_state.last_login != today:
-    st.session_state.coins += 20
-    st.session_state.last_login = today
-    save_coins()
-
-# ================= 10. UI =================
+# ================= 8. GIAO DIỆN CHÍNH =================
 coins = st.session_state.coins
 rank = "🥉 Intern" if coins < 100 else "🥈 Junior" if coins < 300 else "🥇 Senior" if coins < 600 else "👑 Manager"
 
@@ -228,87 +129,88 @@ st.sidebar.markdown(f"### 💰 Coins: {coins}")
 
 menu = st.sidebar.radio("Menu", [
     "📘 Học", "🎓 Lớp học AI (Quiz)", "🎓 Lớp học AI (Chat)",
-    "💼 Đi làm", "🧾 Case Study", "📊 Dashboard",
-    "📊 Financial Report", "🤖 Chấm bút toán",
-    "📚 Từ điển", "🚨 Fraud Detection", "🏆 Leaderboard"
+    "💼 Đi làm", "🧾 Case Study", "📊 Dashboard", "🏆 Leaderboard"
 ])
 
-# ================= 11. LEARNING MAP =================
+# ================= 9. LOGIC CÁC MENU (QUAN TRỌNG ĐỂ HẾT MÀN HÌNH ĐEN) =================
+
 if menu == "📘 Học":
     st.header("🗺️ Learning Map")
 
+    # Hiển thị nội dung bài học khi click vào Node
     if st.session_state.get("current_lesson"):
         lesson = st.session_state.current_lesson
-        st.markdown(f"## 📖 {lesson['title']}")
-        st.write(lesson["content"])
-
-        if st.button("❌ Đóng"):
-            st.session_state.current_lesson = None
-            st.rerun()
+        with st.container(border=True):
+            st.markdown(f"## 📖 {lesson['title']}")
+            st.write(lesson["content"])
+            if st.button("❌ Đóng"):
+                st.session_state.current_lesson = None
+                st.rerun()
+        st.divider()
 
     for level in curriculum:
-
-        level_name = level.get('level')
+        # SỬA LỖI KeyError: dùng .get() để an toàn
+        level_name = level.get('level', level.get('name', 'Cấp độ mới'))
         required = level.get("unlock_coins", 0)
         unlocked = st.session_state.coins >= required
 
         st.markdown(f"## {'🔓' if unlocked else '🔒'} {level_name} (Cần {required} 💰)")
 
-        for module in level.get("modules", []):
-            st.markdown(f"### 📚 {module['name']}")
+        if unlocked:
+            for module in level.get("modules", []):
+                st.markdown(f"### 📚 {module['name']}")
+                
+                # Tính toán trạng thái các Node
+                lesson_nodes = []
+                prev_passed = True
+                for i, lesson in enumerate(module["lessons"]):
+                    l_id = f"{level_name}_{module['name']}_{lesson['title']}"
+                    prog = st.session_state.lesson_progress.get(l_id, {"submitted": False, "score": 0})
+                    
+                    status = "done" if prog["submitted"] and prog["score"] >= 70 else "current" if prev_passed else "locked"
+                    lesson_nodes.append({"status": status, "type": "lesson", "label": str(i+1)})
+                    prev_passed = (status == "done")
 
-            lesson_nodes = []
-            prev_passed = True
+                # Node Boss cuối Module
+                lesson_nodes.append({"status": "current" if prev_passed else "locked", "type": "boss", "label": "👑"})
 
-            for i, lesson in enumerate(module["lessons"]):
-                l_id = f"{level_name}_{module['name']}_{lesson['title']}"
+                # Gọi hàm Render và nhận giá trị click
+                clicked = render_duolingo_pro(module["name"], lesson_nodes)
 
-                if l_id not in st.session_state.lesson_progress:
-                    st.session_state.lesson_progress[l_id] = {"submitted": False, "score": 0}
-
-                prog = st.session_state.lesson_progress[l_id]
-
-                if prog["submitted"] and prog["score"] >= 70:
-                    status = "done"
-                elif prev_passed and unlocked:
-                    status = "current"
-                else:
-                    status = "locked"
-
-                lesson_nodes.append({
-                    "status": status,
-                    "type": "lesson",
-                    "label": str(i+1)
-                })
-
-                prev_passed = (status == "done")
-
-            lesson_nodes.append({
-                "status": "current" if prev_passed else "locked",
-                "type": "boss",
-                "label": "👑"
-            })
-
-            if module == level["modules"][-1]:
-                lesson_nodes.append({
-                    "status": "locked",
-                    "type": "exam",
-                    "label": "🎓"
-                })
-
-            clicked = render_duolingo_pro(module["name"], lesson_nodes)
-
-            if clicked:
-                unit, index = clicked.split("|")
-                if unit == module["name"]:
+                if clicked:
+                    unit, index = clicked.split("|")
                     idx = int(index)
-                    if idx < len(module["lessons"]):
-                        sel = module["lessons"][idx]
-                        st.session_state.current_lesson = sel
-                        st.session_state.current_lesson_id = f"{level_name}_{module['name']}_{sel['title']}"
+                    if unit == module["name"] and idx < len(module["lessons"]):
+                        st.session_state.current_lesson = module["lessons"][idx]
                         st.rerun()
 
-# ================= LOGOUT =================
+elif menu == "🎓 Lớp học AI (Quiz)":
+    st.header("🎓 Trắc nghiệm Kế toán")
+    st.info("Tính năng đang được cập nhật dữ liệu...")
+
+elif menu == "🎓 Lớp học AI (Chat)":
+    st.header("💬 Chat với Giảng viên AI")
+    # Thêm logic chat cơ bản ở đây
+    for msg in st.session_state.chat_history:
+        st.chat_message(msg["role"]).write(msg["content"])
+    
+    if prompt := st.chat_input("Hỏi về định khoản..."):
+        st.session_state.chat_history.append({"role": "user", "content": prompt})
+        st.rerun()
+
+elif menu == "💼 Đi làm":
+    st.header("🏢 Career Mode")
+    st.write("Giải quyết các tình huống thực tế tại doanh nghiệp.")
+
+elif menu == "📊 Dashboard":
+    st.header("📊 Tiến độ của bạn")
+    st.metric("Tổng xu tích lũy", st.session_state.coins)
+
+elif menu == "🏆 Leaderboard":
+    st.header("🏆 Bảng xếp hạng cao thủ")
+    st.write("Ai là kế toán trưởng giỏi nhất?")
+
+# ================= 10. ĐĂNG XUẤT =================
 st.sidebar.divider()
 if st.sidebar.button("🚪 Đăng xuất"):
     st.session_state.clear()
