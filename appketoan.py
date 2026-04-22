@@ -266,26 +266,6 @@ if menu == "📘 Học":
                     if progress["completed"]:
                         st.info("✅ Bạn đã hoàn thành bài này")
 
-                    # ===== QUIZ =====
-                    st.write("🧠 Bài kiểm tra")
-
-                    user_answers = []
-                    correct_count = 0
-
-                    for i, q in enumerate(lesson["quiz"]):
-
-                        ans = st.radio(
-    q["question"],
-    q["options"],
-    key=f"{lesson['id']}_{i}",
-    disabled=lesson_state["submitted"]  # 🔥 khóa sau khi nộp
-)
-
-                        correct_count = 0
-
-if ans == q["options"][q["answer"]]:
-    correct_count += 1
-
                     # ===== SUBMIT =====
                     if not lesson_state["submitted"]:
 
