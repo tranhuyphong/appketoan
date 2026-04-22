@@ -261,12 +261,25 @@ menu = st.sidebar.radio("Menu", [
 
 if menu == "📘 Học":
 
-    st.header("📘 Lộ trình học")
+    st.header("🗺️ Learning Map")
 
     for level in learning_path:
 
-        st.markdown(f"## 🔥 {level['level']}")
+        required = level.get("unlock_coins", 0)
+        unlocked = st.session_state.coins >= required
 
+        # ===== LEVEL HEADER =====
+        if unlocked:
+            st.markdown(f"## 🔓 {level['level']} (Unlock)")
+        else:
+            st.markdown(f"## 🔒 {level['level']} (Cần {required} 💰)")
+
+        # Nếu chưa unlock thì không cho vào trong
+        if not unlocked:
+            st.warning("💰 Bạn cần thêm coin để mở level này")
+            continue
+
+        # ===== MODULE =====
         for module in level["modules"]:
 
             st.markdown(f"### 📚 {module['name']}")
@@ -296,23 +309,60 @@ if menu == "📘 Học":
 
                 lesson_nodes.append({"status": status})
 
-            # ✅ QUAN TRỌNG: phải nằm trong for module
-            render_map(lesson_nodes)
+            # ===== RENDER MAP =====
+            def render_map(lessons):
 
-            # ===== HIỂN THỊ LESSON =====
+    html = """
+    <style>
+    .map {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+        margin: 20px 0;
+    }
+    .node {
+        width: 60px;
+        height: 60px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+        font-size: 18px;
+        transition: 0.2s;
+    }
+    .node:hover {
+        transform: scale(1.1);
+    }
+    .done { background: #22c55e; }
+    .current { background: #3b82f6; }
+    .locked { background: #64748b; opacity: 0.4; }
+    </style>
+
+    <div class="map">
+    """
+
+    for i, lesson in enumerate(lessons):
+
+        if lesson["status"] == "done":
+            cls = "node done"
+        elif lesson["status"] == "current":
+            cls = "node current"
+        else:
+            cls = "node locked"
+
+        html += f"<div class='{cls}'>{i+1}</div>"
+
+    html += "</div>"
+
+    components.html(html, height=120)
+            # ===== LESSON =====
             prev_passed = True
 
             for lesson in module["lessons"]:
 
                 lesson_id = f"{level['level']}_{module['name']}_{lesson['title']}"
-
-                if lesson_id not in st.session_state.lesson_progress:
-                    st.session_state.lesson_progress[lesson_id] = {
-                        "answers": {},
-                        "submitted": False,
-                        "score": 0
-                    }
-
                 lesson_state = st.session_state.lesson_progress[lesson_id]
 
                 unlocked = prev_passed
@@ -350,7 +400,6 @@ if menu == "📘 Học":
                             correct_count += 1
 
                     if not lesson_state["submitted"]:
-
                         if st.button("🚀 Nộp bài", key=f"submit_{lesson_id}"):
 
                             score = int((correct_count / len(lesson["quiz"])) * 100)
@@ -360,7 +409,6 @@ if menu == "📘 Học":
 
                             if score >= 70:
                                 st.success(f"🎉 Pass {score}%")
-
                                 save_progress(lesson_id, score)
 
                                 reward = lesson.get("xp", 20)
@@ -368,7 +416,6 @@ if menu == "📘 Học":
                                 st.session_state.daily_learn += 1
 
                                 st.success(f"💰 +{reward} coins")
-
                             else:
                                 st.error(f"❌ Fail {score}%")
 
