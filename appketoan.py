@@ -179,16 +179,101 @@ menu = st.sidebar.radio("Menu", [
 ])
 
 # ================= 📘 LEARNING =================
-# ================= 📘 LEARNING =================
 if menu == "📘 Học":
     st.header("🗺️ Learning Map")
 
-    # ================= HIỂN THỊ LESSON =================
-    if st.session_state.get("current_lesson"):
-        lesson = st.session_state.current_lesson
+    import time
 
-        st.success(f"📖 {lesson['title']}")
+# ================= HIỂN THỊ LESSON =================
+if st.session_state.get("current_lesson"):
+
+    lesson = st.session_state.current_lesson
+
+    # init timer
+    if "lesson_start" not in st.session_state:
+        st.session_state.lesson_start = time.time()
+
+    elapsed = time.time() - st.session_state.lesson_start
+
+    st.success(f"📖 {lesson['title']}")
+
+    # ===== PHASE 1: XEM NỘI DUNG =====
+    if elapsed < 60 and not st.session_state.get("start_quiz"):
+
         st.write(lesson["content"])
+        st.info(f"⏳ Đọc bài: {int(60 - elapsed)}s")
+
+        if st.button("👉 Làm quiz luôn"):
+            st.session_state.start_quiz = True
+            st.rerun()
+
+        # auto chuyển sau 60s
+        time.sleep(1)
+        st.rerun()
+
+    # ===== PHASE 2: QUIZ =====
+    else:
+        st.warning("🧠 Quiz kiểm tra kiến thức")
+
+        if "quiz_index" not in st.session_state:
+            st.session_state.quiz_index = 0
+            st.session_state.correct = 0
+
+        questions = lesson.get("quiz", [])
+
+        # fallback nếu chưa có quiz
+        if not questions:
+            questions = [
+                {"q": "Tài sản là gì?", "a": ["Nguồn lực", "Chi phí", "Nợ"], "correct": 0},
+                {"q": "Tài sản nằm bên nào?", "a": ["Nợ", "Có"], "correct": 0},
+                {"q": "Tiền mặt là?", "a": ["Tài sản", "Chi phí"], "correct": 0},
+                {"q": "Khoản phải thu là?", "a": ["Tài sản", "Nợ"], "correct": 0},
+                {"q": "Máy móc là?", "a": ["Tài sản", "Chi phí"], "correct": 0},
+            ]
+
+        i = st.session_state.quiz_index
+        q = questions[i]
+
+        st.write(f"❓ {q['q']}")
+
+        choice = st.radio("Chọn đáp án", q["a"], key=f"q_{i}")
+
+        if st.button("Trả lời"):
+            if q["a"].index(choice) == q["correct"]:
+                st.session_state.correct += 1
+
+            st.session_state.quiz_index += 1
+            st.rerun()
+
+        # ===== KẾT THÚC QUIZ =====
+        if st.session_state.quiz_index >= len(questions):
+
+            score = int(st.session_state.correct / len(questions) * 100)
+
+            if score >= 70:
+                st.success(f"🎉 PASS {score}% (+20 coins)")
+                st.session_state.coins += 20
+
+                l_id = st.session_state.current_lesson_id
+                st.session_state.lesson_progress[l_id] = {
+                    "submitted": True,
+                    "score": score
+                }
+
+                save_progress(l_id, score)
+                save_coins()
+
+            else:
+                st.error(f"❌ FAIL {score}% (cần ≥70%)")
+
+            # reset
+            st.session_state.current_lesson = None
+            st.session_state.quiz_index = 0
+            st.session_state.correct = 0
+            st.session_state.lesson_start = None
+            st.session_state.start_quiz = False
+
+            st.rerun()
 
         # ===== QUIZ DEMO (bạn có thể thay bằng question_bank)
         if st.button("✅ Hoàn thành bài"):
