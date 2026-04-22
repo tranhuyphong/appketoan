@@ -207,6 +207,15 @@ if menu == "📘 Học":
             st.progress(done / total)
 
             for lesson in module["lessons"]:
+            lesson_key = f"lesson_{lesson['id']}"
+
+if lesson_key not in st.session_state:
+    st.session_state[lesson_key] = {
+        "submitted": False,
+        "score": 0
+    }
+
+lesson_state = st.session_state[lesson_key]
 
                 is_done = lesson["id"] in progress_data
 
@@ -226,26 +235,53 @@ if menu == "📘 Học":
                     for i, q in enumerate(lesson["quiz"]):
 
                         ans = st.radio(
-                            q["question"],
-                            q["options"],
-                            key=f"{lesson['id']}_{i}"
-                        )
+    q["question"],
+    q["options"],
+    key=f"{lesson['id']}_{i}",
+    disabled=lesson_state["submitted"]  # 🔥 khóa sau khi nộp
+)
 
-                        user_answers.append(ans)
+                        correct_count = 0
 
-                        if ans == q["options"][q["answer"]]:
-                            correct_count += 1
+if ans == q["options"][q["answer"]]:
+    correct_count += 1
 
                     # ===== SUBMIT =====
-                    if st.button("🚀 Nộp bài", key=lesson["id"]):
+                    if not lesson_state["submitted"]:
 
-                        score = int((correct_count / len(lesson["quiz"])) * 100)
+    if st.button("🚀 Nộp bài", key=lesson["id"]):
 
-                        if score >= 70:
+        score = int((correct_count / len(lesson["quiz"])) * 100)
 
-                            st.success(f"🎉 Pass {score}%")
+        lesson_state["submitted"] = True
+        lesson_state["score"] = score
 
-                            save_progress(lesson["id"], score)
+        if score >= 70:
+            st.success(f"🎉 Pass {score}%")
+
+            save_progress(lesson["id"], score)
+
+            if lesson["id"] not in st.session_state.learned_lessons:
+                st.session_state.learned_lessons.append(lesson["id"])
+                st.session_state.coins += lesson.get("xp", 20)
+                st.session_state.daily_learn += 1
+
+                st.success(f"💰 +{lesson.get('xp',20)} coins")
+        else:
+            st.error(f"❌ Fail {score}%")
+
+        save_coins()
+        st.rerun()
+        else:
+    score = lesson_state["score"]
+
+    if score >= 70:
+        st.success(f"✅ Đã hoàn thành ({score}%)")
+    else:
+        st.error(f"❌ Chưa đạt ({score}%)")
+    if st.button("➡️ Bài tiếp", key=f"next_{lesson['id']}"):
+        st.session_state.open_lesson = lesson["id"]
+        st.rerun()
 
                             # ===== REWARD =====
                             if lesson["id"] not in st.session_state.learned_lessons:
