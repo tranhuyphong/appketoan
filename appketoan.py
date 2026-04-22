@@ -264,15 +264,13 @@ if menu == "📘 Học":
 if isinstance(clicked, str) and "|" in clicked:
     unit, index = clicked.split("|")
 
-    if unit != module["name"]:
-        continue
+    if unit == module["name"]:
+        idx = int(index)
 
-    idx = int(index)
+        if idx < len(module["lessons"]):
+            st.session_state.current_lesson = module["lessons"][idx]
 
-    if idx < len(module["lessons"]):
-        st.session_state.current_lesson = module["lessons"][idx]
-
-    st.rerun()
+        st.rerun()
 # ================= CÁC MENU KHÁC GIỮ NGUYÊN =================
 elif menu == "🎓 Lớp học AI (Quiz)":
     st.write("Quiz")
