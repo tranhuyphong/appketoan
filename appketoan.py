@@ -253,7 +253,7 @@ menu = st.sidebar.radio("Menu", [
 # ================= HỌC =================
 if menu == "📘 Học":
     st.header("🗺️ Learning Map")
-    for level in learning_path:
+    for level in curriculum:
         required = level.get("unlock_coins", 0)
         unlocked = st.session_state.coins >= required
 
