@@ -212,103 +212,86 @@ if st.session_state.get("current_lesson"):
         st.rerun()
 
     # ===== PHASE 2: QUIZ =====
-    else:
-        st.warning("🧠 Quiz kiểm tra kiến thức")
+else:
+    st.warning("🧠 Quiz kiểm tra kiến thức")
 
-        if "quiz_index" not in st.session_state:
-            st.session_state.quiz_index = 0
-            st.session_state.correct = 0
+    # init state
+    if "quiz_index" not in st.session_state:
+        st.session_state.quiz_index = 0
+        st.session_state.correct = 0
 
-        questions = lesson.get("quiz", [])
+    questions = lesson.get("quiz", [])
 
-        # fallback nếu chưa có quiz
-        if not questions:
-            questions = [
-                {"q": "Tài sản là gì?", "a": ["Nguồn lực", "Chi phí", "Nợ"], "correct": 0},
-                {"q": "Tài sản nằm bên nào?", "a": ["Nợ", "Có"], "correct": 0},
-                {"q": "Tiền mặt là?", "a": ["Tài sản", "Chi phí"], "correct": 0},
-                {"q": "Khoản phải thu là?", "a": ["Tài sản", "Nợ"], "correct": 0},
-                {"q": "Máy móc là?", "a": ["Tài sản", "Chi phí"], "correct": 0},
-            ]
+    # fallback nếu chưa có quiz
+    if not questions:
+        questions = [
+            {"q": "Tài sản là gì?", "a": ["Nguồn lực", "Chi phí", "Nợ"], "correct": 0},
+            {"q": "Tài sản nằm bên nào?", "a": ["Nợ", "Có"], "correct": 0},
+            {"q": "Tiền mặt là?", "a": ["Tài sản", "Chi phí"], "correct": 0},
+            {"q": "Khoản phải thu là?", "a": ["Tài sản", "Nợ"], "correct": 0},
+            {"q": "Máy móc là?", "a": ["Tài sản", "Chi phí"], "correct": 0},
+        ]
 
-        i = st.session_state.quiz_index
+    i = st.session_state.quiz_index
+
+    # ===== CHƯA HẾT CÂU =====
+    if i < len(questions):
         q = questions[i]
 
-# 👉 hỗ trợ nhiều format khác nhau
-question_text = q.get("q") or q.get("question") or "❓ Câu hỏi lỗi"
-options = q.get("a") or q.get("options") or []
-correct_index = q.get("correct")
+        question_text = q.get("q") or q.get("question") or "❓ Lỗi câu hỏi"
+        options = q.get("a") or q.get("options") or []
+        correct_index = q.get("correct", q.get("answer", 0))
 
-if correct_index is None:
-    correct_index = q.get("answer", 0)
+        st.write(f"### ❓ {question_text}")
 
-st.write(f"❓ {question_text}")
+        choice = st.radio(
+            "Chọn đáp án",
+            options,
+            key=f"quiz_{i}"
+        )
 
-choice = st.radio("Chọn đáp án", options, key=f"q_{i}")
+        if st.button("👉 Trả lời", use_container_width=True):
 
-        if st.button("Trả lời"):
-            if q["a"].index(choice) == q["correct"]:
+            # check đúng
+            if options.index(choice) == correct_index:
                 st.session_state.correct += 1
 
             st.session_state.quiz_index += 1
             st.rerun()
 
-        # ===== KẾT THÚC QUIZ =====
-        if st.session_state.quiz_index >= len(questions):
+    # ===== KẾT THÚC QUIZ =====
+    else:
+        total = len(questions)
+        correct = st.session_state.correct
+        score = int(correct / total * 100)
 
-            score = int(st.session_state.correct / len(questions) * 100)
+        st.markdown("---")
+        st.subheader("📊 Kết quả")
 
-            if score >= 70:
-                st.success(f"🎉 PASS {score}% (+20 coins)")
-                st.session_state.coins += 20
+        if score >= 70:
+            st.success(f"🎉 PASS {score}% (+20 coins)")
+            st.session_state.coins += 20
 
-                l_id = st.session_state.current_lesson_id
-                st.session_state.lesson_progress[l_id] = {
-                    "submitted": True,
-                    "score": score
-                }
+            l_id = st.session_state.current_lesson_id
+            st.session_state.lesson_progress[l_id] = {
+                "submitted": True,
+                "score": score
+            }
 
-                save_progress(l_id, score)
-                save_coins()
+            save_progress(l_id, score)
+            save_coins()
 
-            else:
-                st.error(f"❌ FAIL {score}% (cần ≥70%)")
+        else:
+            st.error(f"❌ FAIL {score}% (cần ≥70%)")
 
-            # reset
+        # reset
+        if st.button("🔄 Học bài khác", use_container_width=True):
             st.session_state.current_lesson = None
             st.session_state.quiz_index = 0
             st.session_state.correct = 0
             st.session_state.lesson_start = None
             st.session_state.start_quiz = False
-
             st.rerun()
-
-        # ===== QUIZ DEMO (bạn có thể thay bằng question_bank)
-        if st.button("✅ Hoàn thành bài"):
-            score = random.randint(50, 100)
-
-            if score >= 70:
-                st.success(f"🎉 PASS {score}% (+20 coins)")
-                st.session_state.coins += 20
-
-                l_id = st.session_state.current_lesson_id
-                st.session_state.lesson_progress[l_id] = {
-                    "submitted": True,
-                    "score": score
-                }
-
-                save_progress(l_id, score)
-                save_coins()
-
-                st.session_state.current_lesson = None
-                st.rerun()
-            else:
-                st.error(f"❌ FAIL {score}% (cần ≥70%)")
-
-        if st.button("❌ Đóng"):
-            st.session_state.current_lesson = None
-            st.rerun()
-
     # ================= MAP =================
     for level in curriculum:
         level_name = level.get("level", "Level")
