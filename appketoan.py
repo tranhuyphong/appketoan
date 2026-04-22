@@ -77,7 +77,10 @@ if "user" not in st.session_state:
 
     # Dừng app tại đây nếu chưa logged in để không hiện các phần dưới
     st.stop()
-         if "progress_loaded" not in st.session_state:
+
+# ===== LOAD PROGRESS (PHẢI ĐỂ NGOÀI, KHÔNG THỤT) =====
+if "progress_loaded" not in st.session_state:
+
     db_progress = load_progress()
 
     for lesson_id, data in db_progress.items():
@@ -88,7 +91,7 @@ if "user" not in st.session_state:
         }
 
     st.session_state.progress_loaded = True
-
+    
 # ================= SAVE =================
 def save_coins():
     # Chỉ lưu khi đã có user đăng nhập
