@@ -1,6 +1,58 @@
 import streamlit as st
 import random
 import datetime
+import streamlit.components.v1 as components
+
+def render_map(lessons):
+
+    html = """
+    <style>
+    .map {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        margin: 15px 0;
+    }
+    .node {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-weight: bold;
+    }
+    .done { background: #22c55e; }
+    .current { background: #3b82f6; }
+    .locked { background: #64748b; opacity: 0.4; }
+    .line {
+        width: 30px;
+        height: 4px;
+        background: #94a3b8;
+    }
+    </style>
+
+    <div class="map">
+    """
+
+    for i, lesson in enumerate(lessons):
+
+        if lesson["status"] == "done":
+            cls = "node done"
+        elif lesson["status"] == "current":
+            cls = "node current"
+        else:
+            cls = "node locked"
+
+        html += f"<div class='{cls}'>{i+1}</div>"
+
+        if i < len(lessons) - 1:
+            html += "<div class='line'></div>"
+
+    html += "</div>"
+
+    components.html(html, height=100)
 from supabase import create_client
 from data.career_tasks import career_tasks
 from data.learning_path import learning_path
@@ -211,13 +263,53 @@ if menu == "📘 Học":
 
     st.header("📘 Lộ trình học")
 
-    for level in learning_path:
+    required = level.get("unlock_coins", 0)
+unlocked = st.session_state.coins >= required
+
+if unlocked:
+    st.markdown(f"## 🔥 {level['level']}")
+else:
+    st.markdown(f"""
+    <div style='opacity:0.5'>
+    <h2>🔒 {level['level']}</h2>
+    💰 Cần {required} coins
+    </div>
+    """, unsafe_allow_html=True)
+
+st.info(f"💰 Coins của bạn: {st.session_state.coins} / {required}")
 
         st.markdown(f"## 🔥 {level['level']}")
 
         level_unlocked = True  # bạn có thể custom sau
 
         for module in level["modules"]:
+            # ===== BUILD MAP =====
+lesson_nodes = []
+
+for lesson in module["lessons"]:
+
+    lesson_id = f"{level['level']}_{module['name']}_{lesson['title']}"
+
+    if lesson_id not in st.session_state.lesson_progress:
+        st.session_state.lesson_progress[lesson_id] = {
+            "answers": {},
+            "submitted": False,
+            "score": 0
+        }
+
+    state = st.session_state.lesson_progress[lesson_id]
+
+    if state["submitted"] and state["score"] >= 70:
+        status = "done"
+    elif not state["submitted"]:
+        status = "current"
+    else:
+        status = "locked"
+
+    lesson_nodes.append({"status": status})
+
+# ===== RENDER MAP =====
+render_map(lesson_nodes)
 
             st.markdown(f"### 📚 {module['name']}")
 
