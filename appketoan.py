@@ -211,126 +211,104 @@ if menu == "📘 Học":
 
     st.header("📘 Lộ trình học")
 
-    all_lessons = []
     for level in learning_path:
+
+        st.markdown(f"## 🔥 {level['level']}")
+
+        level_unlocked = True  # bạn có thể custom sau
+
         for module in level["modules"]:
+
+            st.markdown(f"### 📚 {module['name']}")
+
+            prev_passed = True
+
             for lesson in module["lessons"]:
+
                 lesson_id = f"{level['level']}_{module['name']}_{lesson['title']}"
-                all_lessons.append((lesson_id, lesson, level, module))
 
-    # ===== PROGRESS BAR =====
-    done = sum(
-        1 for lid, _, _, _ in all_lessons
-        if lid in st.session_state.lesson_progress
-        and st.session_state.lesson_progress[lid]["submitted"]
-        and st.session_state.lesson_progress[lid]["score"] >= 70
-    )
+                # INIT
+                if lesson_id not in st.session_state.lesson_progress:
+                    st.session_state.lesson_progress[lesson_id] = {
+                        "answers": {},
+                        "submitted": False,
+                        "score": 0
+                    }
 
-    percent = int((done / len(all_lessons)) * 100) if all_lessons else 0
-    st.progress(percent / 100)
-    st.write(f"📊 Tiến độ: {percent}% ({done}/{len(all_lessons)})")
+                lesson_state = st.session_state.lesson_progress[lesson_id]
 
-    # ===== RENDER =====
-    prev_passed = True
+                unlocked = prev_passed
 
-    for lesson_id, lesson, level, module in all_lessons:
+                # ===== STATUS ICON =====
+                if lesson_state["submitted"]:
+                    icon = "✅" if lesson_state["score"] >= 70 else "❌"
+                elif unlocked:
+                    icon = "⬜"
+                else:
+                    icon = "🔒"
 
-        if lesson_id not in st.session_state.lesson_progress:
-            st.session_state.lesson_progress[lesson_id] = {
-                "answers": {},
-                "submitted": False,
-                "score": 0
-            }
+                # ===== UI =====
+                with st.expander(f"{icon} {lesson['title']}"):
 
-        lesson_state = st.session_state.lesson_progress[lesson_id]
+                    if not unlocked:
+                        st.warning("🔒 Hoàn thành bài trước để mở khóa")
+                        continue
 
-        unlocked = prev_passed
+                    # ===== CONTENT =====
+                    st.write(lesson["content"])
+                    st.divider()
 
-        status = "🔒"
-        if lesson_state["submitted"]:
-            status = "✅" if lesson_state["score"] >= 70 else "❌"
-        elif unlocked:
-            status = "⬜"
+                    correct_count = 0
 
-        with st.expander(f"{status} {lesson['title']}", expanded=False):
+                    for i, q in enumerate(lesson["quiz"]):
 
-            if not unlocked:
-                st.warning("🔒 Bạn cần hoàn thành bài trước")
-                continue
+                        ans = st.radio(
+                            q["question"],
+                            q["options"],
+                            key=f"{lesson_id}_{i}",
+                            disabled=lesson_state["submitted"]
+                        )
 
-            st.write(lesson["content"])
-            st.divider()
-            st.write("🧠 Quiz")
+                        lesson_state["answers"][i] = ans
 
-            correct_count = 0
+                        if ans == q["options"][q["answer"]]:
+                            correct_count += 1
 
-            for i, q in enumerate(lesson["quiz"]):
+                    # ===== SUBMIT =====
+                    if not lesson_state["submitted"]:
 
-                default = lesson_state["answers"].get(i, None)
+                        if st.button("🚀 Nộp bài", key=f"submit_{lesson_id}"):
 
-                ans = st.radio(
-                    q["question"],
-                    q["options"],
-                    index=q["options"].index(default) if default else 0,
-                    key=f"{lesson_id}_{i}",
-                    disabled=lesson_state["submitted"]
-                )
+                            score = int((correct_count / len(lesson["quiz"])) * 100)
 
-                lesson_state["answers"][i] = ans
+                            lesson_state["submitted"] = True
+                            lesson_state["score"] = score
 
-                if ans == q["options"][q["answer"]]:
-                    correct_count += 1
+                            if score >= 70:
+                                st.success(f"🎉 Pass {score}%")
 
-            # ===== SUBMIT =====
-            if not lesson_state["submitted"]:
+                                save_progress(lesson_id, score)
 
-                if st.button("🚀 Nộp bài", key=f"submit_{lesson_id}"):
+                                reward = lesson.get("xp", 20)
+                                st.session_state.coins += reward
+                                st.session_state.daily_learn += 1
 
-                    score = int((correct_count / len(lesson["quiz"])) * 100)
-                    lesson_state["submitted"] = True
-                    lesson_state["score"] = score
+                                st.success(f"💰 +{reward} coins")
 
-                    if score >= 70:
-                        st.success(f"🎉 Pass {score}%")
+                            else:
+                                st.error(f"❌ Fail {score}%")
 
-                        save_progress(lesson_id, score)
-
-                        reward = lesson.get("xp", 20) + 10
-                        st.session_state.coins += reward
-                        st.session_state.daily_learn += 1
-
-                        st.success(f"💰 +{reward} coins")
+                            save_coins()
+                            st.rerun()
 
                     else:
-                        st.error(f"❌ Fail {score}%")
-                        st.info("💡 Gợi ý: học lại hoặc bấm 'Giải thích'")
+                        if lesson_state["score"] >= 70:
+                            st.success(f"✅ Hoàn thành ({lesson_state['score']}%)")
+                        else:
+                            st.error(f"❌ Chưa đạt ({lesson_state['score']}%)")
 
-                    save_coins()
-                    st.rerun()
-
-            else:
-                score = lesson_state["score"]
-
-                if score >= 70:
-                    st.success(f"✅ Hoàn thành ({score}%)")
-                else:
-                    st.error(f"❌ Chưa đạt ({score}%)")
-
-            # ===== AI SUPPORT =====
-            col1, col2 = st.columns(2)
-
-            with col1:
-                if st.button("🤖 Giải thích", key=f"ai_{lesson_id}"):
-                    explain = teacher_explain(lesson["title"])
-                    st.info(explain)
-
-            with col2:
-                if st.button("🎯 Luyện thêm", key=f"extra_{lesson_id}"):
-                    extra = teacher_explain(f"Tạo quiz khó hơn về {lesson['title']}")
-                    st.warning(extra)
-
-        # cập nhật unlock cho bài sau
-        prev_passed = lesson_state["submitted"] and lesson_state["score"] >= 70
+                # ===== UNLOCK NEXT =====
+                prev_passed = lesson_state["submitted"] and lesson_state["score"] >= 70
 # ================= QUIZ =================
 elif menu == "🎓 Lớp học AI (Quiz)":
 
