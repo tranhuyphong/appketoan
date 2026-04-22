@@ -310,27 +310,8 @@ if menu == "📘 Học":
                 lesson_nodes.append({"status": status})
 
             # ===== RENDER MAP =====
-def render_map(lessons):
-    html = """
-    <style>
-    .map { display: flex; flex-wrap: wrap; gap: 20px; margin: 20px 0; }
-    .node {
-        width: 55px; height: 55px; border-radius: 50%;
-        display: flex; align-items: center; justify-content: center;
-        color: white; font-weight: bold; font-size: 18px; transition: 0.2s;
-    }
-    .node:hover { transform: scale(1.1); }
-    .done { background: #22c55e; box-shadow: 0 0 10px #22c55e; }
-    .current { background: #3b82f6; box-shadow: 0 0 10px #3b82f6; border: 2px solid white; }
-    .locked { background: #64748b; opacity: 0.4; }
-    </style>
-    <div class="map">
-    """
-    for i, lesson in enumerate(lessons):
-        cls = f"node {lesson['status']}"
-        html += f"<div class='{cls}'>{i+1}</div>"
-    html += "</div>"
-    components.html(html, height=120)
+            render_map(lesson_nodes)
+
             # ===== LESSON =====
             prev_passed = True
 
