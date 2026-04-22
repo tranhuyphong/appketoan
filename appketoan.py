@@ -234,9 +234,17 @@ if st.session_state.get("current_lesson"):
         i = st.session_state.quiz_index
         q = questions[i]
 
-        st.write(f"❓ {q['q']}")
+# 👉 hỗ trợ nhiều format khác nhau
+question_text = q.get("q") or q.get("question") or "❓ Câu hỏi lỗi"
+options = q.get("a") or q.get("options") or []
+correct_index = q.get("correct")
 
-        choice = st.radio("Chọn đáp án", q["a"], key=f"q_{i}")
+if correct_index is None:
+    correct_index = q.get("answer", 0)
+
+st.write(f"❓ {question_text}")
+
+choice = st.radio("Chọn đáp án", options, key=f"q_{i}")
 
         if st.button("Trả lời"):
             if q["a"].index(choice) == q["correct"]:
