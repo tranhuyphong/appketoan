@@ -1,4 +1,4 @@
-curriculum = [
+curriculum = learning_path
     {
         "lesson_name": "Phương trình kế toán",
 
