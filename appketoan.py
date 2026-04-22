@@ -180,9 +180,9 @@ menu = st.sidebar.radio("Menu", [
 
 # ================= 📘 LEARNING =================
 if menu == "📘 Học":
-    st.header("🗺️ Learning Map")
-
     import time
+
+    st.header("🗺️ Learning Map")
 
 # ================= HIỂN THỊ LESSON =================
 if st.session_state.get("current_lesson"):
