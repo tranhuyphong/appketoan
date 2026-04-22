@@ -93,7 +93,8 @@ def render_duolingo_pro(unit_id, lessons):
 
     html += "</div>"
 
-    return components.html(f"""
+    return components.html(
+    f"""
     {html}
     <script>
     function sendClick(val){{
@@ -103,7 +104,10 @@ def render_duolingo_pro(unit_id, lessons):
         }}, "*");
     }}
     </script>
-    """, height=600)
+    """,
+    height=600,
+    key=unit_id   # 🔥 QUAN TRỌNG
+)
 
 # ================= DB =================
 def load_progress():
