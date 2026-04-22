@@ -267,9 +267,11 @@ if menu == "📘 Học":
 
         st.markdown(f"## 🔥 {level['level']}")
 
-        for module in level["modules"]:   # ✅ THẲNG HÀNG với st.markdown
+        for module in level["modules"]:
 
             st.markdown(f"### 📚 {module['name']}")
+
+            # ===== BUILD MAP =====
             lesson_nodes = []
 
             for lesson in module["lessons"]:
@@ -293,18 +295,17 @@ if menu == "📘 Học":
                     status = "locked"
 
                 lesson_nodes.append({"status": status})
-# ===== RENDER MAP =====
-render_map(lesson_nodes)
 
-            st.markdown(f"### 📚 {module['name']}")
+            # ✅ QUAN TRỌNG: phải nằm trong for module
+            render_map(lesson_nodes)
 
+            # ===== HIỂN THỊ LESSON =====
             prev_passed = True
 
             for lesson in module["lessons"]:
 
                 lesson_id = f"{level['level']}_{module['name']}_{lesson['title']}"
 
-                # INIT
                 if lesson_id not in st.session_state.lesson_progress:
                     st.session_state.lesson_progress[lesson_id] = {
                         "answers": {},
@@ -316,7 +317,6 @@ render_map(lesson_nodes)
 
                 unlocked = prev_passed
 
-                # ===== STATUS ICON =====
                 if lesson_state["submitted"]:
                     icon = "✅" if lesson_state["score"] >= 70 else "❌"
                 elif unlocked:
@@ -324,14 +324,12 @@ render_map(lesson_nodes)
                 else:
                     icon = "🔒"
 
-                # ===== UI =====
                 with st.expander(f"{icon} {lesson['title']}"):
 
                     if not unlocked:
                         st.warning("🔒 Hoàn thành bài trước để mở khóa")
                         continue
 
-                    # ===== CONTENT =====
                     st.write(lesson["content"])
                     st.divider()
 
@@ -351,7 +349,6 @@ render_map(lesson_nodes)
                         if ans == q["options"][q["answer"]]:
                             correct_count += 1
 
-                    # ===== SUBMIT =====
                     if not lesson_state["submitted"]:
 
                         if st.button("🚀 Nộp bài", key=f"submit_{lesson_id}"):
@@ -384,7 +381,6 @@ render_map(lesson_nodes)
                         else:
                             st.error(f"❌ Chưa đạt ({lesson_state['score']}%)")
 
-                # ===== UNLOCK NEXT =====
                 prev_passed = lesson_state["submitted"] and lesson_state["score"] >= 70
 # ================= QUIZ =================
 elif menu == "🎓 Lớp học AI (Quiz)":
