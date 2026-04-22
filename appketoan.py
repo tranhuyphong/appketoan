@@ -94,18 +94,17 @@ def render_duolingo_pro(unit_id, lessons):
 
     html += "</div>"
 
-    components.html(f"""
-    {html}
-    <script>
-    function sendClick(val){{
-        window.parent.postMessage({{
-            type: "streamlit:setSessionState",
-            key: "clicked_node",
-            value: val
-        }}, "*");
-    }}
-    </script>
-    """, height=600)
+    return components.html(f"""
+{html}
+<script>
+function sendClick(val){
+    window.parent.postMessage({
+        type: "streamlit:setComponentValue",
+        value: val
+    }, "*");
+}
+</script>
+""", height=600)
 
 # ================= DB =================
 def load_progress():
@@ -255,9 +254,7 @@ if menu == "📘 Học":
 
                 prev_passed = (status == "done")
 
-            render_duolingo_pro(module["name"], lesson_nodes)
-
-            clicked = st.session_state.get("clicked_node")
+            clicked = render_duolingo_pro(module["name"], lesson_nodes)
 
             if clicked and "|" in clicked:
                 unit, index = clicked.split("|")
