@@ -142,6 +142,9 @@ def save_coins():
         }).execute()
     except:
         pass
+def update_level():
+    xp = st.session_state.xp
+    st.session_state.level = xp // 100 + 1
 
 # ================= SESSION =================
 if "coins" not in st.session_state:
@@ -155,6 +158,11 @@ if "coins" not in st.session_state:
         "q_index": 0,
         "chat_history": []
     })
+if "xp" not in st.session_state:
+    st.session_state.xp = 0
+
+if "level" not in st.session_state:
+    st.session_state.level = 1
 
 # ===== Boss state =====
 if "boss_mode" not in st.session_state:
@@ -209,7 +217,9 @@ if "progress_loaded" not in st.session_state:
 
 # ================= UI =================
 coins = st.session_state.coins
-st.sidebar.markdown(f"💰 Coins: {coins}")
+st.sidebar.markdown(f"💰 Coins: {st.session_state.coins}")
+st.sidebar.markdown(f"⭐ XP: {st.session_state.xp}")
+st.sidebar.markdown(f"🏆 Level: {st.session_state.level}")
 
 menu = st.sidebar.radio("Menu", [
     "📘 Học",
@@ -278,8 +288,10 @@ if menu == "📘 Học":
                 score = int(st.session_state.correct / len(questions) * 100)
 
                 if score >= 70:
-                    st.success(f"🎉 PASS {score}% (+20 coins)")
+                    st.success(f"🎉 PASS {score}% (+20 coins +20 XP)")
                     st.session_state.coins += 20
+                    st.session_state.xp += 20
+                    update_level()
                     st.session_state.lesson_progress[l_id] = {"score": score}
                 else:
                     st.error(f"❌ FAIL {score}%")
@@ -391,6 +403,8 @@ if menu == "📘 Học":
                     if percent >= 70:
                         st.success(f"PASS {percent}% (+100 coins)")
                         st.session_state.coins += 100
+                        st.session_state.xp += 100
+                        update_level()
                         st.session_state.lesson_progress[exam_id] = {"score": percent}
                     else:
                         st.error(f"FAIL {percent}%")
@@ -428,6 +442,8 @@ if st.session_state.get("boss_mode") and st.session_state.get("boss_q"):
         if percent >= 70:
             st.success(f"👑 Boss PASS {percent}% (+50 coins)")
             st.session_state.coins += 50
+            st.session_state.xp += 50
+            update_level()
         else:
             st.error(f"💀 Boss FAIL {percent}%")
 
