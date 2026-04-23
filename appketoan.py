@@ -188,10 +188,11 @@ if menu == "📘 Học":
         lesson = st.session_state.current_lesson
 
         # init timer
-        if "lesson_start" not in st.session_state:
-            st.session_state.lesson_start = time.time()
+        # FIX crash khi lesson_start = None
+if not st.session_state.get("lesson_start"):
+    st.session_state.lesson_start = time.time()
 
-        elapsed = time.time() - st.session_state.lesson_start
+elapsed = time.time() - st.session_state.lesson_start
         st.success(f"📖 {lesson['title']}")
 
         # ===== PHASE 1: XEM NỘI DUNG =====
