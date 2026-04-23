@@ -1,13 +1,21 @@
-import streamlit as st
-from openai import OpenAI
+import random
 
-client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+def boss_msg(user_input):
 
-def boss_msg(task):
-    res = client.chat.completions.create(
-        model="gpt-4.1-mini",
-        messages=[
-            {"role": "user", "content": f"Giao việc kế toán: {task['description']}"}
-        ]
-    )
-    return res.choices[0].message.content
+    questions = [
+        "Tài sản là gì?",
+        "Phân biệt tài sản và nợ?",
+        "Tiền mặt thuộc loại gì?",
+        "Doanh thu là gì?",
+        "Chi phí là gì?"
+    ]
+
+    # câu đầu
+    if user_input == "ask_question":
+        return random.choice(questions)
+
+    # logic trả lời
+    if "tài sản" in user_input.lower():
+        return "✅ Đúng! Tiếp: Doanh thu là gì?"
+    else:
+        return "❌ Sai! Thử lại: Doanh thu là gì?"
