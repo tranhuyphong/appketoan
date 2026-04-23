@@ -562,11 +562,11 @@ elif menu == "💼 Đi làm":
     # ===== 1. TẠO TASK =====
     if "daily_tasks" not in st.session_state or st.session_state.daily_tasks is None:
     
-    st.session_state.daily_tasks = [
-        generate_job(st.session_state.level),
-        generate_job(st.session_state.level),
-        generate_job(st.session_state.level)
-    ]
+        st.session_state.daily_tasks = [
+            generate_job(st.session_state.level),
+            generate_job(st.session_state.level),
+            generate_job(st.session_state.level)
+        ]
 
         st.session_state.daily_tasks = random.sample(
             available_tasks,
