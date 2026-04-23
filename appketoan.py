@@ -154,6 +154,17 @@ if "coins" not in st.session_state:
         "clicked_node": None,
         "q_index": 0,
         "chat_history": []
+if "boss_mode" not in st.session_state:
+    st.session_state.boss_mode = False
+
+if "boss_chat" not in st.session_state:
+    st.session_state.boss_chat = []
+
+if "boss_turn" not in st.session_state:
+    st.session_state.boss_turn = 0
+
+if "boss_score" not in st.session_state:
+    st.session_state.boss_score = 0
     })
 
 # ================= LOGIN =================
@@ -278,6 +289,56 @@ if menu == "📘 Học":
                     st.session_state.start_quiz = False
                     st.session_state.lesson_timer = None
                     st.rerun()
+    # ================= BOSS AI CHAT =================
+if st.session_state.get("boss_mode"):
+
+    st.header("👑 Boss Battle (AI)")
+
+    # hiển thị chat
+    for msg in st.session_state.boss_chat:
+        st.chat_message(msg["role"]).write(msg["content"])
+
+    # 👉 câu hỏi đầu tiên
+    if st.session_state.boss_turn == 0 and len(st.session_state.boss_chat) == 0:
+        question = boss_msg("ask_question")
+        st.session_state.boss_chat.append({
+            "role": "assistant",
+            "content": question
+        })
+        st.rerun()
+
+    user_input = st.chat_input("Trả lời boss...")
+
+    if user_input:
+        # lưu user
+        st.session_state.boss_chat.append({
+            "role": "user",
+            "content": user_input
+        })
+
+        # AI phản hồi
+        reply = boss_msg(user_input)
+
+        st.session_state.boss_chat.append({
+            "role": "assistant",
+            "content": reply
+        })
+
+        st.session_state.boss_turn += 1
+
+        # 👉 kết thúc sau 5 câu
+        if st.session_state.boss_turn >= 5:
+            score = random.randint(70, 100)
+
+            if score >= 70:
+                st.success(f"👑 Boss PASS {score}% (+50 coins)")
+                st.session_state.coins += 50
+            else:
+                st.error(f"💀 Boss FAIL {score}%")
+
+            st.session_state.boss_mode = False
+
+        st.rerun()
 
     # ================= MAP =================
     for level_index, level in enumerate(curriculum):
@@ -324,9 +385,10 @@ if menu == "📘 Học":
             if st.button("👑 Boss", key=boss_id, disabled=not unlocked):
 
                 st.session_state.boss_mode = True
-                st.session_state.boss_q = random.sample(question_bank, 5)
-                st.session_state.boss_i = 0
+                st.session_state.boss_chat = []
+                st.session_state.boss_turn = 0
                 st.session_state.boss_score = 0
+                st.rerun()
 
             if st.session_state.get("boss_mode"):
 
