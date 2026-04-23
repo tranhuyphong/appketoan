@@ -1,21 +1,28 @@
 import random
 
-def boss_msg(user_input):
-
-    questions = [
-        "Tài sản là gì?",
-        "Phân biệt tài sản và nợ?",
-        "Tiền mặt thuộc loại gì?",
-        "Doanh thu là gì?",
-        "Chi phí là gì?"
-    ]
-
-    # câu đầu
-    if user_input == "ask_question":
+def boss_msg(action):
+    if action == "ask_question":
+        questions = [
+            "Chi phí là gì?",
+            "Tài sản là gì?",
+            "Doanh thu là gì?",
+            "Nợ phải trả là gì?",
+            "Vốn chủ sở hữu là gì?"
+        ]
         return random.choice(questions)
 
-    # logic trả lời
-    if "tài sản" in user_input.lower():
-        return "✅ Đúng! Tiếp: Doanh thu là gì?"
-    else:
-        return "❌ Sai! Thử lại: Doanh thu là gì?"
+    elif action == "react_correct":
+        return random.choice([
+            "🔥 Chuẩn rồi!",
+            "💪 Tốt lắm!",
+            "👑 Ngươi khá đấy!"
+        ])
+
+    elif action == "react_wrong":
+        return random.choice([
+            "💀 Sai rồi!",
+            "❌ Học lại đi!",
+            "😈 Ta mạnh hơn ngươi!"
+        ])
+
+    return "..."
