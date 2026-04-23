@@ -377,51 +377,56 @@ if menu == "📘 Học":
                         st.rerun()
 
             # ===== EXAM =====
-            exam_id = f"{level_name}_{module['name']}_exam"
+exam_id = f"{level_name}_{module['name']}_exam"
 
-            if st.button("🎓 Exam", key=exam_id, disabled=not unlocked):
-                st.session_state.exam_mode = True
-                st.session_state.exam_q = random.sample(question_bank, 10)
-                st.session_state.exam_i = 0
-                st.session_state.exam_score = 0
-                st.session_state.exam_timer = None
+if st.button("🎓 Exam", key=exam_id, disabled=not unlocked):
+    st.session_state.exam_mode = True
+    st.session_state.exam_q = random.sample(
+        question_bank,
+        min(10, len(question_bank))
+    )
+    st.session_state.exam_i = 0
+    st.session_state.exam_score = 0
+    st.session_state.exam_timer = None
 
-            if st.session_state.get("exam_mode"):
-                remaining = realtime_timer(60, "exam_timer")
+# ✅ FIX Ở ĐÂY
+if st.session_state.get("exam_mode") and st.session_state.get("exam_q"):
 
-                qs = st.session_state.exam_q
-                i = st.session_state.exam_i
+    remaining = realtime_timer(60, "exam_timer")
 
-                if remaining == 0:
-                    st.error("⏰ Hết giờ!")
-                    i = len(qs)
+    qs = st.session_state.exam_q
+    i = st.session_state.exam_i
 
-                if i < len(qs):
-                    q = qs[i]
+    if remaining == 0:
+        st.error("⏰ Hết giờ!")
+        i = len(qs)
 
-                    st.write(f"🎓 {q['question']}")
-                    ans = st.radio("Chọn", q["options"], key=f"exam_{i}")
+    if i < len(qs):
+        q = qs[i]
 
-                    if st.button("👉 Trả lời"):
-                        if q["options"].index(ans) == q["correct"]:
-                            st.session_state.exam_score += 1
+        st.write(f"🎓 {q['question']}")
+        ans = st.radio("Chọn", q["options"], key=f"exam_{i}")
 
-                        st.session_state.exam_i += 1
-                        st.rerun()
+        if st.button("👉 Trả lời"):
+            if q["options"].index(ans) == q["correct"]:
+                st.session_state.exam_score += 1
 
-                else:
-                    percent = int(st.session_state.exam_score / len(qs) * 100)
+            st.session_state.exam_i += 1
+            st.rerun()
 
-                    if percent >= 70:
-                        st.success(f"PASS {percent}% (+100 coins)")
-                        st.session_state.coins += 100
-                        st.session_state.lesson_progress[exam_id] = {"score": percent}
-                    else:
-                        st.error(f"FAIL {percent}%")
+    else:
+        percent = int(st.session_state.exam_score / len(qs) * 100)
 
-                    if st.button("🔁 Thi lại"):
-                        st.session_state.exam_mode = False
-                        st.rerun()
+        if percent >= 70:
+            st.success(f"PASS {percent}% (+100 coins)")
+            st.session_state.coins += 100
+            st.session_state.lesson_progress[exam_id] = {"score": percent}
+        else:
+            st.error(f"FAIL {percent}%")
+
+        if st.button("🔁 Thi lại"):
+            st.session_state.exam_mode = False
+            st.rerun()
 # ================= CÁC MENU KHÁC GIỮ NGUYÊN =================
 elif menu == "🎓 Lớp học AI (Quiz)":
     st.write("Quiz")
