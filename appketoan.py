@@ -146,6 +146,21 @@ def save_coins():
 def update_level():
     xp = st.session_state.xp
     st.session_state.level = xp // 100 + 1
+def update_role():
+    lvl = st.session_state.level
+
+    if lvl >= 10:
+        st.session_state.role = "Manager"
+        st.session_state.salary = 500
+    elif lvl >= 7:
+        st.session_state.role = "Senior"
+        st.session_state.salary = 300
+    elif lvl >= 4:
+        st.session_state.role = "Staff"
+        st.session_state.salary = 200
+    else:
+        st.session_state.role = "Intern"
+        st.session_state.salary = 100
 
 # ================= SESSION =================
 if "coins" not in st.session_state:
@@ -513,12 +528,24 @@ elif menu == "💼 Đi làm":
         st.session_state.bank += st.session_state.salary
         st.success(f"💰 Nhận lương: +{st.session_state.salary}")
         st.session_state.last_salary_day = today
+# 😈 SA THẢI
+if st.session_state.total_job >= 5 and accuracy < 50:
+    st.error("😈 Bạn bị sa thải do KPI quá thấp!")
+
+    st.session_state.role = "Intern"
+    st.session_state.salary = 50
+    st.session_state.bank = 0
+
+    st.session_state.total_job = 0
+    st.session_state.correct_job = 0
+
+    st.stop()
     
-        # reset mỗi ngày
-        if st.session_state.last_job_date != today:
-            st.session_state.job_done_today = 0
-            st.session_state.last_job_date = today
-            st.session_state.daily_tasks = None
+    # reset mỗi ngày
+    if st.session_state.last_job_date != today:
+        st.session_state.job_done_today = 0
+        st.session_state.last_job_date = today
+        st.session_state.daily_tasks = None
     # KPI
     accuracy = 0
     if st.session_state.total_job > 0:
@@ -536,18 +563,13 @@ elif menu == "💼 Đi làm":
         st.stop()
 
     # lấy task theo level
-    if "daily_tasks" not in st.session_state:
-    st.session_state.daily_tasks = random.sample(
-        available_tasks = [
-    t for t in job_tasks
-    if t["level"] <= st.session_state.level
-    and t["level"] >= st.session_state.level - 2
-]
+if "daily_tasks" not in st.session_state:
 
-st.session_state.daily_tasks = random.sample(
-    available_tasks,
-    min(3, len(available_tasks))
-)
+    available_tasks = [
+        t for t in job_tasks
+        if t["level"] <= st.session_state.level
+        and t["level"] >= st.session_state.level - 2
+    ]
 
     # nhận job
     if not st.session_state.job_mode:
@@ -592,36 +614,9 @@ st.session_state.daily_tasks = random.sample(
                 st.session_state.coins += task["penalty"]
 
             update_level()
-        def update_role():
-            lvl = st.session_state.level
-        
-            if lvl >= 10:
-                st.session_state.role = "Manager"
-                st.session_state.salary = 500
-            elif lvl >= 7:
-                st.session_state.role = "Senior"
-                st.session_state.salary = 300
-            elif lvl >= 4:
-                st.session_state.role = "Staff"
-                st.session_state.salary = 200
-            else:
-                st.session_state.role = "Intern"
-                st.session_state.salary = 100
-
-    st.session_state.job_mode = False
-    st.rerun()
-# 😈 SA THẢI
-if st.session_state.total_job >= 5 and accuracy < 50:
-    st.error("😈 Bạn bị sa thải do KPI quá thấp!")
-
-    st.session_state.role = "Intern"
-    st.session_state.salary = 50
-    st.session_state.bank = 0
-
-    st.session_state.total_job = 0
-    st.session_state.correct_job = 0
-
-    st.stop()
+            update_role()
+            st.session_state.job_mode = False
+            st.rerun()
 elif menu == "🧾 Case Study":
     st.write("Case Study")
 
