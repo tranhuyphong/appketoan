@@ -343,44 +343,6 @@ if menu == "📘 Học":
                     st.session_state.boss_i = 0
                     st.session_state.boss_score = 0
 
-            if st.session_state.get("boss_mode") and st.session_state.get("boss_q") and st.session_state.get("boss_i") is not None:
-                qs = st.session_state.boss_q
-                i = st.session_state.boss_i
-
-                if i < len(qs):
-                    q = qs[i]
-
-                    st.write(f"👑 {q['question']}")
-                    ans = st.radio(
-                        "Chọn",
-                        q["options"],
-                        key=f"boss_{st.session_state.current_lesson_id}_{i}_{st.session_state.boss_turn}"
-                    )
-
-                    if st.button("👉 Trả lời Boss"):
-                        if q["options"].index(ans) == q["correct"]:
-                            st.session_state.boss_score += 1
-
-                        st.session_state.boss_i += 1
-                        st.rerun()
-
-                else:
-                    percent = int(st.session_state.boss_score / len(qs) * 100)
-
-                    if percent >= 70:
-                        st.success(f"👑 Boss PASS {percent}% (+50 coins)")
-                        st.session_state.coins += 50
-                        st.session_state.lesson_progress[boss_id] = {"score": percent}
-                    else:
-                        st.error(f"💀 Boss FAIL {percent}%")
-
-                    if st.button("🔄 Làm lại Boss"):
-                        st.session_state.boss_mode = False
-                        st.session_state.boss_q = None
-                        st.session_state.boss_i = 0
-                        st.session_state.boss_score = 0
-                        st.rerun()
-
             # ===== EXAM =====
 exam_id = f"{level_name}_{module['name']}_exam"
 
@@ -413,6 +375,7 @@ if st.session_state.get("exam_mode") and st.session_state.get("exam_q"):
         ans = st.radio(
             "Chọn",
             q["options"],
+            key=f"exam_{i}"
         )
 
         if st.button("👉 Trả lời"):
@@ -434,6 +397,45 @@ if st.session_state.get("exam_mode") and st.session_state.get("exam_q"):
 
         if st.button("🔁 Thi lại"):
             st.session_state.exam_mode = False
+            st.rerun()
+# ================= BOSS PLAY =================
+if st.session_state.get("boss_mode") and st.session_state.get("boss_q"):
+
+    qs = st.session_state.boss_q
+    i = st.session_state.boss_i
+
+    if i < len(qs):
+        q = qs[i]
+
+        st.write(f"👑 {q['question']}")
+
+        ans = st.radio(
+            "Chọn",
+            q["options"],
+            key=f"boss_{i}"
+        )
+
+        if st.button("👉 Trả lời Boss"):
+            if q["options"].index(ans) == q["correct"]:
+                st.session_state.boss_score += 1
+
+            st.session_state.boss_i += 1
+            st.rerun()
+
+    else:
+        percent = int(st.session_state.boss_score / len(qs) * 100)
+
+        if percent >= 70:
+            st.success(f"👑 Boss PASS {percent}% (+50 coins)")
+            st.session_state.coins += 50
+        else:
+            st.error(f"💀 Boss FAIL {percent}%")
+
+        if st.button("🔄 Làm lại Boss"):
+            st.session_state.boss_mode = False
+            st.session_state.boss_q = None
+            st.session_state.boss_i = 0
+            st.session_state.boss_score = 0
             st.rerun()
 # ================= CÁC MENU KHÁC GIỮ NGUYÊN =================
 elif menu == "🎓 Lớp học AI (Quiz)":
