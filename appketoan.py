@@ -350,7 +350,11 @@ if menu == "📘 Học":
                     q = qs[i]
 
                     st.write(f"👑 {q['question']}")
-                    ans = st.radio("Chọn", q["options"], key=f"boss_{i}")
+                    ans = st.radio(
+                        "Chọn",
+                        q["options"],
+                        key=f"boss_{st.session_state.current_lesson_id}_{i}"
+                    )
 
                     if st.button("👉 Trả lời Boss"):
                         if q["options"].index(ans) == q["correct"]:
@@ -405,7 +409,7 @@ if st.session_state.get("exam_mode") and st.session_state.get("exam_q"):
         q = qs[i]
 
         st.write(f"🎓 {q['question']}")
-        ans = st.radio("Chọn", q["options"], key=f"exam_{i}")
+        ans = st.radio("Chọn", q["options"], key=f"exam_{st.session_state.current_lesson_id}_{i}"
 
         if st.button("👉 Trả lời"):
             if q["options"].index(ans) == q["correct"]:
