@@ -40,6 +40,40 @@ except Exception as e:
 SUPABASE_URL = "https://wjwtowmdcdkpryxcqqty.supabase.co"
 SUPABASE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indqd3Rvd21kY2RrcHJ5eGNxcXR5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzY3NjY1NDMsImV4cCI6MjA5MjM0MjU0M30.jX4wAiXNezvmnwvr1hucjRxANZ5jWgzwn_9BsVCoueg"
 supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+# ================= TIMER REALTIME =================
+import streamlit.components.v1 as components
+
+def realtime_timer(duration, key):
+    if key not in st.session_state or st.session_state[key] is None:
+        st.session_state[key] = int(time.time())
+
+    js = f"""
+    <script>
+    let start = {st.session_state[key]};
+    let duration = {duration};
+
+    function updateTimer(){{
+        let now = Math.floor(Date.now()/1000);
+        let remaining = duration - (now - start);
+
+        if(remaining < 0) remaining = 0;
+
+        document.getElementById("{key}").innerText = "⏱ " + remaining + "s";
+
+        if(remaining <= 0){{
+            window.parent.postMessage({{type: "streamlit:rerun"}}, "*");
+        }}
+    }}
+
+    setInterval(updateTimer, 1000);
+    </script>
+    <div id="{key}">⏱ {duration}s</div>
+    """
+
+    components.html(js, height=40)
+
+    remaining = duration - (int(time.time()) - st.session_state[key])
+    return max(remaining, 0)
 
 # ================= 4. MAP FIX =================
 def render_map_streamlit(module_name, lessons):
@@ -184,43 +218,33 @@ import time
 if menu == "📘 Học":
     st.header("🗺️ Learning Map")
 
-    # ================= LESSON VIEW =================
-    if st.session_state.get("current_lesson"):
+    # ================= LESSON =================
+    if st.session_state.current_lesson:
         lesson = st.session_state.current_lesson
         l_id = st.session_state.current_lesson_id
 
-        # init state
-        if st.session_state.get("lesson_start") is None:
-            st.session_state.lesson_start = time.time()
-
-        if "start_quiz" not in st.session_state:
-            st.session_state.start_quiz = False
-
-        if "quiz_index" not in st.session_state:
-            st.session_state.quiz_index = 0
-            st.session_state.correct = 0
-
-        elapsed = time.time() - st.session_state.lesson_start
-
         st.success(f"📖 {lesson['title']}")
 
-        # ===== CONTENT =====
-        if elapsed < 15 and not st.session_state.start_quiz:
-            st.write(lesson["content"])
-            st.info(f"⏳ Đọc bài: {int(15 - elapsed)}s")
+        remaining = realtime_timer(20, "lesson_timer")
 
-            if st.button("👉 Làm quiz ngay"):
+        if remaining > 0 and not st.session_state.get("start_quiz", False):
+            st.write(lesson["content"])
+
+            if st.button("👉 Làm quiz"):
                 st.session_state.start_quiz = True
                 st.rerun()
 
-        # ===== QUIZ =====
         else:
             st.warning("🧠 Quiz")
 
             questions = lesson.get("quiz", [])
             if not questions:
-                st.info("Bài này chưa có quiz")
+                st.info("Chưa có quiz")
                 st.stop()
+
+            if "quiz_index" not in st.session_state:
+                st.session_state.quiz_index = 0
+                st.session_state.correct = 0
 
             i = st.session_state.quiz_index
 
@@ -228,14 +252,10 @@ if menu == "📘 Học":
                 q = questions[i]
 
                 st.write(f"### ❓ {q['question']}")
-                choice = st.radio(
-                    "Chọn đáp án",
-                    q["options"],
-                    key=f"{l_id}_quiz_{i}"
-                )
+                ans = st.radio("Chọn", q["options"], key=f"{l_id}_{i}")
 
                 if st.button("👉 Trả lời"):
-                    if q["options"].index(choice) == q["answer"]:
+                    if q["options"].index(ans) == q["answer"]:
                         st.session_state.correct += 1
 
                     st.session_state.quiz_index += 1
@@ -244,35 +264,32 @@ if menu == "📘 Học":
             else:
                 score = int(st.session_state.correct / len(questions) * 100)
 
-                st.subheader(f"📊 {score}%")
-
                 if score >= 70:
-                    st.success("🎉 PASS +20 coins")
+                    st.success(f"🎉 PASS {score}% (+20 coins)")
                     st.session_state.coins += 20
-
-                    st.session_state.lesson_progress[l_id] = {
-                        "submitted": True,
-                        "score": score
-                    }
-
-                    save_progress(l_id, score)
-                    save_coins()
-
+                    st.session_state.lesson_progress[l_id] = {"score": score}
                 else:
-                    st.error("❌ FAIL (≥70%)")
+                    st.error(f"❌ FAIL {score}%")
 
-                if st.button("🔙 Quay lại map"):
+                if st.button("🔙 Quay lại"):
                     st.session_state.current_lesson = None
-                    st.session_state.lesson_start = None
                     st.session_state.quiz_index = 0
                     st.session_state.correct = 0
                     st.session_state.start_quiz = False
+                    st.session_state.lesson_timer = None
                     st.rerun()
 
     # ================= MAP =================
-    for level in curriculum:
+    for level_index, level in enumerate(curriculum):
         level_name = level.get("level", "Level")
-        unlocked = coins >= level.get("unlock_coins", 0)
+
+        # unlock bằng exam level trước
+        if level_index == 0:
+            unlocked = True
+        else:
+            prev = curriculum[level_index - 1]
+            exam_id = f"{prev['level']}_{prev['modules'][-1]['name']}_exam"
+            unlocked = st.session_state.lesson_progress.get(exam_id, {}).get("score", 0) >= 70
 
         st.markdown(f"## {'🔓' if unlocked else '🔒'} {level_name}")
 
@@ -282,143 +299,113 @@ if menu == "📘 Học":
             lessons = module["lessons"]
             cols = st.columns(5)
 
-            all_passed = True
-
             # ===== LESSON =====
             for i, lesson in enumerate(lessons):
                 l_id = f"{level_name}_{module['name']}_{lesson['title']}"
 
-                prog = st.session_state.lesson_progress.get(
-                    l_id, {"submitted": False, "score": 0}
-                )
+                prog = st.session_state.lesson_progress.get(l_id, {})
+                done = prog.get("score", 0) >= 70
 
-                if prog["submitted"] and prog["score"] >= 70:
-                    status = "done"
-                elif unlocked:
-                    status = "current"
-                    all_passed = False
-                else:
-                    status = "locked"
-                    all_passed = False
-
-                icon = "🟢" if status == "done" else "🔵" if status == "current" else "⚫"
+                icon = "🟢" if done else "🔵" if unlocked else "⚫"
 
                 with cols[i % 5]:
-                    if st.button(icon, key=l_id, disabled=(status == "locked")):
+                    if st.button(icon, key=l_id, disabled=not unlocked):
                         st.session_state.current_lesson = lesson
                         st.session_state.current_lesson_id = l_id
-                        st.session_state.lesson_start = None
+                        st.session_state.lesson_timer = None
+                        st.session_state.start_quiz = False
                         st.session_state.quiz_index = 0
                         st.session_state.correct = 0
-                        st.session_state.start_quiz = False
                         st.rerun()
 
-            # ===== BOSS =====
-            elif ltype == "boss":
-    st.subheader("👑 Boss Battle")
+            # ===== BOSS (THI THẬT) =====
+            boss_id = f"{level_name}_{module['name']}_boss"
 
-    if "boss_questions" not in st.session_state:
-        st.session_state.boss_questions = random.sample(question_bank, 5)
-        st.session_state.boss_index = 0
-        st.session_state.boss_score = 0
+            if st.button("👑 Boss", key=boss_id, disabled=not unlocked):
 
-    i = st.session_state.boss_index
-    questions = st.session_state.boss_questions
+                st.session_state.boss_mode = True
+                st.session_state.boss_q = random.sample(question_bank, 5)
+                st.session_state.boss_i = 0
+                st.session_state.boss_score = 0
 
-    if i < len(questions):
-        q = questions[i]
+            if st.session_state.get("boss_mode"):
 
-        st.write(f"### 👑 {q['question']}")
-        ans = st.radio("Chọn", q["options"], key=f"boss_{i}")
+                qs = st.session_state.boss_q
+                i = st.session_state.boss_i
 
-        if st.button("👉 Trả lời Boss"):
-            if q["options"].index(ans) == q["correct"]:
-                st.session_state.boss_score += 1
+                if i < len(qs):
+                    q = qs[i]
+                    st.write(f"👑 {q['question']}")
+                    ans = st.radio("Chọn", q["options"], key=f"boss_{i}")
 
-            st.session_state.boss_index += 1
-            st.rerun()
+                    if st.button("👉 Trả lời Boss"):
+                        if q["options"].index(ans) == q["correct"]:
+                            st.session_state.boss_score += 1
 
-    else:
-        score = int(st.session_state.boss_score / len(questions) * 100)
+                        st.session_state.boss_i += 1
+                        st.rerun()
 
-        if score >= 70:
-            st.success(f"👑 Boss PASS {score}% (+50 coins)")
-            st.session_state.coins += 50
+                else:
+                    percent = int(st.session_state.boss_score / len(qs) * 100)
 
-            st.session_state.lesson_progress[l_id] = {
-                "submitted": True,
-                "score": score
-            }
+                    if percent >= 70:
+                        st.success(f"PASS {percent}% (+50 coins)")
+                        st.session_state.coins += 50
+                        st.session_state.lesson_progress[boss_id] = {"score": percent}
+                    else:
+                        st.error(f"FAIL {percent}%")
 
-            save_progress(l_id, score)
-            save_coins()
+                    if st.button("🔄 Boss lại"):
+                        st.session_state.boss_mode = False
+                        st.rerun()
 
-        else:
-            st.error(f"💀 Boss FAIL {score}%")
+            # ===== EXAM (THI THẬT + TIMER) =====
+            exam_id = f"{level_name}_{module['name']}_exam"
 
-        if st.button("🔄 Làm lại Boss"):
-            st.session_state.boss_questions = None
-            st.session_state.boss_index = 0
-            st.session_state.boss_score = 0
-            st.rerun()
+            if st.button("🎓 Exam", key=exam_id, disabled=not unlocked):
+                st.session_state.exam_mode = True
+                st.session_state.exam_q = random.sample(question_bank, 10)
+                st.session_state.exam_i = 0
+                st.session_state.exam_score = 0
+                st.session_state.exam_timer = None
 
-            # ===== EXAM =====
-            elif ltype == "exam":
-    st.subheader("🎓 Final Exam")
+            if st.session_state.get("exam_mode"):
 
-    if "exam_questions" not in st.session_state:
-        st.session_state.exam_questions = random.sample(question_bank, 10)
-        st.session_state.exam_index = 0
-        st.session_state.exam_score = 0
-        st.session_state.exam_timer = time.time()
+                remaining = realtime_timer(60, "exam_timer")
 
-    # ⏱️ Timer 120s
-    remaining = countdown_timer(120, key="exam_timer")
+                qs = st.session_state.exam_q
+                i = st.session_state.exam_i
 
-    i = st.session_state.exam_index
-    questions = st.session_state.exam_questions
+                if remaining == 0:
+                    st.error("⏰ Hết giờ!")
+                    i = len(qs)
 
-    if remaining == 0:
-        st.error("⏰ Hết giờ!")
-        st.session_state.exam_index = len(questions)
+                if i < len(qs):
+                    q = qs[i]
 
-    if i < len(questions):
-        q = questions[i]
+                    st.write(f"🎓 {q['question']}")
+                    ans = st.radio("Chọn", q["options"], key=f"exam_{i}")
 
-        st.write(f"### 🎓 {q['question']}")
-        ans = st.radio("Chọn", q["options"], key=f"exam_{i}")
+                    if st.button("👉 Trả lời"):
+                        if q["options"].index(ans) == q["correct"]:
+                            st.session_state.exam_score += 1
 
-        if st.button("👉 Trả lời"):
-            if q["options"].index(ans) == q["correct"]:
-                st.session_state.exam_score += 1
+                        st.session_state.exam_i += 1
+                        st.rerun()
 
-            st.session_state.exam_index += 1
-            st.rerun()
+                else:
+                    percent = int(st.session_state.exam_score / len(qs) * 100)
 
-    else:
-        score = int(st.session_state.exam_score / len(questions) * 100)
+                    if percent >= 70:
+                        st.success(f"PASS {percent}% (+100 coins)")
+                        st.session_state.coins += 100
+                        st.session_state.lesson_progress[exam_id] = {"score": percent}
+                    else:
+                        st.error(f"FAIL {percent}%")
 
-        if score >= 70:
-            st.success(f"🎓 PASS {score}% (+100 coins)")
-            st.session_state.coins += 100
-
-            st.session_state.lesson_progress[l_id] = {
-                "submitted": True,
-                "score": score
-            }
-
-            save_progress(l_id, score)
-            save_coins()
-
-        else:
-            st.error(f"❌ FAIL {score}%")
-
-        if st.button("🔁 Thi lại"):
-            st.session_state.exam_questions = None
-            st.session_state.exam_index = 0
-            st.session_state.exam_score = 0
-            st.session_state.exam_timer = time.time()
-            st.rerun()
+                    if st.button("🔁 Thi lại"):
+                        st.session_state.exam_mode = False
+                        st.rerun()
 # ================= CÁC MENU KHÁC GIỮ NGUYÊN =================
 elif menu == "🎓 Lớp học AI (Quiz)":
     st.write("Quiz")
