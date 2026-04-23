@@ -181,6 +181,12 @@ if "level" not in st.session_state:
     st.session_state.level = 1
 if "bank" not in st.session_state:
     st.session_state.bank = 0
+if "dev_mode" not in st.session_state:
+    st.session_state.dev_mode = True  # bật test
+if st.session_state.get("dev_mode"):
+    st.session_state.coins = 9999
+    st.session_state.xp = 999
+    st.session_state.salary = 500
 # ===== JOB SYSTEM =====
 if "job_mode" not in st.session_state:
     st.session_state.job_mode = False
