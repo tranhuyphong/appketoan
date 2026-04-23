@@ -291,68 +291,17 @@ if menu == "📘 Học":
                     st.session_state.start_quiz = False
                     st.session_state.lesson_timer = None
                     st.rerun()
-    # ================= BOSS AI CHAT =================
-if st.session_state.get("boss_mode"):
-
-    st.header("👑 Boss Battle (AI)")
-
-    # hiển thị chat
-    for msg in st.session_state.boss_chat:
-        st.chat_message(msg["role"]).write(msg["content"])
-
-    # 👉 câu hỏi đầu tiên
-    if st.session_state.boss_turn == 0 and len(st.session_state.boss_chat) == 0:
-        question = boss_msg("ask_question")
-        st.session_state.boss_chat.append({
-            "role": "assistant",
-            "content": question
-        })
-        st.rerun()
-
-    user_input = st.chat_input("Trả lời boss...")
-
-    if user_input:
-        # lưu user
-        st.session_state.boss_chat.append({
-            "role": "user",
-            "content": user_input
-        })
-
-        # AI phản hồi
-        reply = boss_msg(user_input)
-
-        st.session_state.boss_chat.append({
-            "role": "assistant",
-            "content": reply
-        })
-
-        st.session_state.boss_turn += 1
-
-        # 👉 kết thúc sau 5 câu
-        if st.session_state.boss_turn >= 5:
-            score = random.randint(70, 100)
-
-            if score >= 70:
-                st.success(f"👑 Boss PASS {score}% (+50 coins)")
-                st.session_state.coins += 50
-            else:
-                st.error(f"💀 Boss FAIL {score}%")
-
-            st.session_state.boss_mode = False
-
-        st.rerun()
 
     # ================= MAP =================
     for level_index, level in enumerate(curriculum):
         level_name = level.get("level", "Level")
 
-        # unlock bằng exam level trước
         if level_index == 0:
             unlocked = True
         else:
             prev = curriculum[level_index - 1]
-            exam_id = f"{prev['level']}_{prev['modules'][-1]['name']}_exam"
-            unlocked = st.session_state.lesson_progress.get(exam_id, {}).get("score", 0) >= 70
+            exam_id_prev = f"{prev['level']}_{prev['modules'][-1]['name']}_exam"
+            unlocked = st.session_state.lesson_progress.get(exam_id_prev, {}).get("score", 0) >= 70
 
         st.markdown(f"## {'🔓' if unlocked else '🔒'} {level_name}")
 
@@ -381,24 +330,25 @@ if st.session_state.get("boss_mode"):
                         st.session_state.correct = 0
                         st.rerun()
 
-            # ===== BOSS (THI THẬT) =====
+            # ===== BOSS =====
             boss_id = f"{level_name}_{module['name']}_boss"
 
             if st.button("👑 Boss", key=boss_id, disabled=not unlocked):
+                if len(question_bank) < 5:
+                    st.error("❌ Không đủ câu hỏi")
+                else:
+                    st.session_state.boss_mode = True
+                    st.session_state.boss_q = random.sample(question_bank, 5)
+                    st.session_state.boss_i = 0
+                    st.session_state.boss_score = 0
 
-                st.session_state.boss_mode = True
-                st.session_state.boss_chat = []
-                st.session_state.boss_turn = 0
-                st.session_state.boss_score = 0
-                st.rerun()
-
-            if st.session_state.get("boss_mode"):
-
+            if st.session_state.get("boss_mode") and st.session_state.get("boss_q"):
                 qs = st.session_state.boss_q
                 i = st.session_state.boss_i
 
                 if i < len(qs):
                     q = qs[i]
+
                     st.write(f"👑 {q['question']}")
                     ans = st.radio("Chọn", q["options"], key=f"boss_{i}")
 
@@ -413,17 +363,20 @@ if st.session_state.get("boss_mode"):
                     percent = int(st.session_state.boss_score / len(qs) * 100)
 
                     if percent >= 70:
-                        st.success(f"PASS {percent}% (+50 coins)")
+                        st.success(f"👑 Boss PASS {percent}% (+50 coins)")
                         st.session_state.coins += 50
                         st.session_state.lesson_progress[boss_id] = {"score": percent}
                     else:
-                        st.error(f"FAIL {percent}%")
+                        st.error(f"💀 Boss FAIL {percent}%")
 
-                    if st.button("🔄 Boss lại"):
+                    if st.button("🔄 Làm lại Boss"):
                         st.session_state.boss_mode = False
+                        st.session_state.boss_q = None
+                        st.session_state.boss_i = 0
+                        st.session_state.boss_score = 0
                         st.rerun()
 
-            # ===== EXAM (THI THẬT + TIMER) =====
+            # ===== EXAM =====
             exam_id = f"{level_name}_{module['name']}_exam"
 
             if st.button("🎓 Exam", key=exam_id, disabled=not unlocked):
@@ -434,7 +387,6 @@ if st.session_state.get("boss_mode"):
                 st.session_state.exam_timer = None
 
             if st.session_state.get("exam_mode"):
-
                 remaining = realtime_timer(60, "exam_timer")
 
                 qs = st.session_state.exam_q
